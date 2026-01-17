@@ -35,12 +35,10 @@ function AuthErrorMessage(error: unknown) {
 }
 
 function LoginContent() {
-  const { user, loading, signInWithGoogle, signInWithEmail, signUpWithEmail } = useAuth();
+  const { user, loading, signInWithGoogle, signInWithEmail } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const nextUrl = searchParams.get("next") || "/generate";
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
-  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -56,14 +54,7 @@ function LoginContent() {
     setError(null);
     setSubmitting(true);
     try {
-      if (mode === "signup") {
-        if (!fullName.trim()) {
-          throw new Error("Full name is required.");
-        }
-        await signUpWithEmail(fullName.trim(), email.trim(), password);
-      } else {
-        await signInWithEmail(email.trim(), password);
-      }
+      await signInWithEmail(email.trim(), password);
     } catch (err) {
       setError(AuthErrorMessage(err));
     } finally {
@@ -79,35 +70,7 @@ function LoginContent() {
           <p className="text-gray-600 mt-2">Access resume tailoring and exports.</p>
         </div>
 
-        <div className="flex gap-2 mb-6">
-          <Button
-            className="flex-1"
-            variant={mode === "signin" ? "default" : "outline"}
-            onClick={() => setMode("signin")}
-          >
-            Sign In
-          </Button>
-          <Button
-            className="flex-1"
-            variant={mode === "signup" ? "default" : "outline"}
-            onClick={() => setMode("signup")}
-          >
-            Sign Up
-          </Button>
-        </div>
-
         <div className="space-y-4">
-          {mode === "signup" && (
-            <div>
-              <Label htmlFor="fullName">Full name</Label>
-              <Input
-                id="fullName"
-                placeholder="Jane Doe"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-              />
-            </div>
-          )}
           <div>
             <Label htmlFor="email">Email</Label>
             <Input
@@ -134,7 +97,7 @@ function LoginContent() {
             onClick={handleEmailAuth}
             disabled={loading || submitting}
           >
-            {mode === "signup" ? "Create account" : "Sign in with email"}
+            Sign in with email
           </Button>
         </div>
 
