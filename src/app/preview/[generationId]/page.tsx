@@ -21,12 +21,9 @@ import {
   TEMPLATES,
   DesignOptions,
   DEFAULT_DESIGN_OPTIONS,
-  FONT_FAMILIES,
-  MARGIN_SIZES,
-  HeaderAlignment,
-  FontFamily
+  FONT_FAMILIES
 } from "@/types/resume";
-import { ArrowLeft, Download, FileText, ChevronDown, ArrowRight, Eye, Settings2, X, RotateCcw, Loader2, Pencil, FileSignature, UserCircle } from "lucide-react";
+import { ArrowLeft, Download, FileText, ChevronDown, ArrowRight, Eye, RotateCcw, Loader2, Pencil, FileSignature, UserCircle } from "lucide-react";
 import { buildCoverLetterFields, CoverLetterFields, CoverLetterStyles, generateCoverLetterHTML } from "@/lib/cover-letter";
 
 export default function PreviewPage() {
@@ -42,7 +39,6 @@ export default function PreviewPage() {
   const [showTemplateDropdown, setShowTemplateDropdown] = useState(false);
   const [activeTab, setActiveTab] = useState<"tailored" | "compare" | "insights" | "cover-letter">("compare");
   const [addedKeywords, setAddedKeywords] = useState<string[]>([]);
-  const [showDesignPanel, setShowDesignPanel] = useState(false);
   const [designOptions, setDesignOptions] = useState<DesignOptions>(DEFAULT_DESIGN_OPTIONS);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [coverLetter, setCoverLetter] = useState<string | null>(null);
@@ -479,15 +475,6 @@ export default function PreviewPage() {
               </div>
             )}
             
-            <Button 
-              variant="outline" 
-              onClick={() => setShowDesignPanel(!showDesignPanel)}
-              className={showDesignPanel ? "bg-blue-50 border-blue-300" : ""}
-            >
-              <Settings2 className="h-4 w-4 mr-2" />
-              Edit Design
-            </Button>
-
             <Button onClick={handleExportPDF} disabled={isExporting}>
               {isExporting ? (
                 <>
@@ -509,115 +496,7 @@ export default function PreviewPage() {
         </div>
       </header>
 
-      {/* Design Panel */}
-      {showDesignPanel && (
-        <div className="bg-white border-b p-4 print:hidden">
-          <div className="container mx-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h4 className="font-medium text-gray-800">Design Options</h4>
-              <Button variant="ghost" size="sm" onClick={() => setShowDesignPanel(false)}>
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-              {/* Header Alignment */}
-              <div>
-                <Label className="text-sm font-medium mb-2 block">Header Alignment</Label>
-                <div className="flex gap-1">
-                  {(["left", "center", "right"] as HeaderAlignment[]).map((align) => (
-                    <Button
-                      key={align}
-                      variant={designOptions.headerAlignment === align ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setDesignOptions({ ...designOptions, headerAlignment: align })}
-                      className="flex-1 capitalize text-xs"
-                    >
-                      {align}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Margin Size */}
-              <div>
-                <Label className="text-sm font-medium mb-2 block">Margin Size</Label>
-                <div className="flex gap-1">
-                  {MARGIN_SIZES.map((margin) => (
-                    <Button
-                      key={margin.value}
-                      variant={designOptions.marginSize === margin.value ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setDesignOptions({ ...designOptions, marginSize: margin.value })}
-                      className="flex-1 capitalize text-xs"
-                    >
-                      {margin.label}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Font Family */}
-              <div>
-                <Label className="text-sm font-medium mb-2 block">Font Family</Label>
-                <select
-                  value={designOptions.fontFamily}
-                  onChange={(e) => setDesignOptions({ ...designOptions, fontFamily: e.target.value as FontFamily })}
-                  className="w-full border rounded-md px-2 py-1.5 text-sm"
-                >
-                  {FONT_FAMILIES.map((font) => (
-                    <option key={font.value} value={font.value}>{font.label}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Font Size */}
-              <div>
-                <Label className="text-sm font-medium mb-2 block">
-                  Font Size: {designOptions.fontSize}px
-                </Label>
-                <input
-                  type="range"
-                  min="12"
-                  max="18"
-                  step="1"
-                  value={designOptions.fontSize}
-                  onChange={(e) => setDesignOptions({ ...designOptions, fontSize: Number(e.target.value) })}
-                  className="w-full"
-                />
-              </div>
-
-              {/* Line Height */}
-              <div>
-                <Label className="text-sm font-medium mb-2 block">
-                  Line Height: {designOptions.lineHeight.toFixed(1)}
-                </Label>
-                <input
-                  type="range"
-                  min="1"
-                  max="1.7"
-                  step="0.1"
-                  value={designOptions.lineHeight}
-                  onChange={(e) => setDesignOptions({ ...designOptions, lineHeight: Number(e.target.value) })}
-                  className="w-full"
-                />
-              </div>
-            </div>
-
-            {/* Reset button */}
-            <div className="flex justify-end mt-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setDesignOptions(DEFAULT_DESIGN_OPTIONS)}
-              >
-                <RotateCcw className="h-3 w-3 mr-2" />
-                Reset to Default
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Design edits live in the editor */}
 
       {/* Tab Navigation */}
       <div className="bg-white border-b print:hidden">
