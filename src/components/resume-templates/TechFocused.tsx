@@ -81,6 +81,15 @@ function highlightText(text: string, keywords: string[]): React.ReactNode {
 }
 
 export default function TechFocused({ resume, accentColor = "purple", designOptions = DEFAULT_DESIGN_OPTIONS, highlightKeywords = [] }: TemplateProps) {
+  const normalizeUrl = (url?: string) => {
+    if (!url) return "";
+    const trimmed = url.trim();
+    if (!trimmed) return "";
+    if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+      return trimmed;
+    }
+    return `https://${trimmed}`;
+  };
   const accent = ACCENT_COLORS[accentColor];
   const fontFamily = FONT_FAMILIES.find(f => f.value === designOptions.fontFamily)?.css || FONT_FAMILIES[1].css;
   const padding = MARGIN_SIZES.find(m => m.value === designOptions.marginSize)?.padding || "2rem";
@@ -163,7 +172,17 @@ export default function TechFocused({ resume, accentColor = "purple", designOpti
           <div key={idx} data-resume-section className="mb-1.5" style={{ breakInside: 'avoid' }}>
             <span className="font-bold">{project.name}</span>
             {project.description && (
-              <span style={{ fontSize: `${smallFontSize}px` }}>. {highlightText(project.description, highlightKeywords)}</span>
+              <div className="mt-0.5" style={{ fontSize: `${smallFontSize}px` }}>
+                {highlightText(project.description, highlightKeywords)}
+              </div>
+            )}
+            {project.url && (
+              <div className="mt-0.5" style={{ fontSize: `${smallFontSize}px` }}>
+                Live demo:{" "}
+                <a href={normalizeUrl(project.url)} target="_blank" rel="noreferrer" className="text-blue-600 underline">
+                  {project.url}
+                </a>
+              </div>
             )}
           </div>
         ))}

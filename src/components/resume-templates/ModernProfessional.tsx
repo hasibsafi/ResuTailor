@@ -42,6 +42,15 @@ function highlightText(text: string, keywords: string[]): React.ReactNode {
 }
 
 export default function ModernProfessional({ resume, designOptions = DEFAULT_DESIGN_OPTIONS, highlightKeywords = [] }: ModernProfessionalProps) {
+  const normalizeUrl = (url?: string) => {
+    if (!url) return "";
+    const trimmed = url.trim();
+    if (!trimmed) return "";
+    if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+      return trimmed;
+    }
+    return `https://${trimmed}`;
+  };
   const fontFamily = FONT_FAMILIES.find(f => f.value === designOptions.fontFamily)?.css || FONT_FAMILIES[0].css;
   const padding = MARGIN_SIZES.find(m => m.value === designOptions.marginSize)?.padding || "2rem";
   const alignmentClass = {
@@ -125,13 +134,18 @@ export default function ModernProfessional({ resume, designOptions = DEFAULT_DES
             <span className="font-semibold text-gray-900" style={{ fontSize: `${subheadingSize}px` }}>
               {project.name}
             </span>
-            {project.url && (
-              <a href={project.url} className="text-blue-600 ml-2 font-normal hover:underline" style={{ fontSize: `${smallFontSize}px` }}>
-                [Link]
-              </a>
-            )}
             {project.description && (
-              <span className="text-gray-600" style={{ fontSize: `${smallFontSize}px` }}>. {highlightText(project.description, highlightKeywords)}</span>
+              <div className="text-gray-600 mt-0.5" style={{ fontSize: `${smallFontSize}px` }}>
+                {highlightText(project.description, highlightKeywords)}
+              </div>
+            )}
+            {project.url && (
+              <div className="mt-0.5" style={{ fontSize: `${smallFontSize}px` }}>
+                Live demo:{" "}
+                <a href={normalizeUrl(project.url)} target="_blank" rel="noreferrer" className="text-blue-600 underline">
+                  {project.url}
+                </a>
+              </div>
             )}
           </div>
         ))}

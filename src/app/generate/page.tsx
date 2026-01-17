@@ -29,7 +29,7 @@ import {
   FontFamily,
   TEMPLATES
 } from "@/types/resume";
-import { Loader2, Sparkles, ArrowLeft, ArrowRight, Check, Plus, RotateCcw, Settings2, X, AlertTriangle, AlertCircle, UserCircle } from "lucide-react";
+import { Loader2, Sparkles, ArrowLeft, ArrowRight, Check, Plus, RotateCcw, X, AlertTriangle, AlertCircle, UserCircle } from "lucide-react";
 
 type Step = "upload" | "analyze" | "generate";
 
@@ -60,7 +60,6 @@ export default function GeneratePage() {
   const [extractedJd, setExtractedJd] = useState<ExtractedJobDescription | null>(null);
 
   // Design options state
-  const [showDesignPanel, setShowDesignPanel] = useState(false);
   const [designOptions, setDesignOptions] = useState<DesignOptions>(DEFAULT_DESIGN_OPTIONS);
 
   // Handle file upload
@@ -604,132 +603,7 @@ export default function GeneratePage() {
               
               <div className="bg-gray-50 border-b px-4 py-2 flex items-center justify-between">
                 <h3 className="font-medium text-gray-700 text-sm">Preview</h3>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => setShowDesignPanel(!showDesignPanel)}
-                  className={showDesignPanel ? "bg-blue-50 border-blue-300" : ""}
-                >
-                  <Settings2 className="h-4 w-4 mr-2" />
-                  Edit Design
-                </Button>
               </div>
-              
-              {/* Design Panel */}
-              {showDesignPanel && (
-                <div className="bg-white border-b p-4 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-medium text-gray-800">Design Options</h4>
-                    <Button variant="ghost" size="sm" onClick={() => setShowDesignPanel(false)}>
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    {/* Header Alignment */}
-                    <div>
-                      <Label className="text-sm font-medium mb-2 block">Header Alignment</Label>
-                      <div className="flex gap-1">
-                        {(["left", "center", "right"] as HeaderAlignment[]).map((align) => (
-                          <Button
-                            key={align}
-                            variant={designOptions.headerAlignment === align ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setDesignOptions({ ...designOptions, headerAlignment: align })}
-                            className="flex-1 capitalize"
-                          >
-                            {align}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Margin Size */}
-                    <div>
-                      <Label className="text-sm font-medium mb-2 block">Margin Size</Label>
-                      <div className="flex gap-1">
-                        {MARGIN_SIZES.map((margin) => (
-                          <Button
-                            key={margin.value}
-                            variant={designOptions.marginSize === margin.value ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setDesignOptions({ ...designOptions, marginSize: margin.value })}
-                            className="flex-1 capitalize"
-                          >
-                            {margin.label}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Font Family */}
-                    <div>
-                      <Label className="text-sm font-medium mb-2 block">Font Family</Label>
-                      <select
-                        value={designOptions.fontFamily}
-                        onChange={(e) => setDesignOptions({ ...designOptions, fontFamily: e.target.value as FontFamily })}
-                        className="w-full border rounded-md px-3 py-2 text-sm"
-                      >
-                        {FONT_FAMILIES.map((font) => (
-                          <option key={font.value} value={font.value}>{font.label}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Font Size */}
-                    <div>
-                      <Label className="text-sm font-medium mb-2 block">
-                        Font Size: {designOptions.fontSize}px
-                      </Label>
-                      <input
-                        type="range"
-                        min="12"
-                        max="18"
-                        step="1"
-                        value={designOptions.fontSize}
-                        onChange={(e) => setDesignOptions({ ...designOptions, fontSize: Number(e.target.value) })}
-                        className="w-full"
-                      />
-                      <div className="flex justify-between text-xs text-gray-400 mt-1">
-                        <span>12px</span>
-                        <span>18px</span>
-                      </div>
-                    </div>
-
-                    {/* Line Height */}
-                    <div>
-                      <Label className="text-sm font-medium mb-2 block">
-                        Line Height: {designOptions.lineHeight.toFixed(1)}
-                      </Label>
-                      <input
-                        type="range"
-                        min="1"
-                        max="1.7"
-                        step="0.1"
-                        value={designOptions.lineHeight}
-                        onChange={(e) => setDesignOptions({ ...designOptions, lineHeight: Number(e.target.value) })}
-                        className="w-full"
-                      />
-                      <div className="flex justify-between text-xs text-gray-400 mt-1">
-                        <span>1.0</span>
-                        <span>1.7</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Reset button */}
-                  <div className="flex justify-end pt-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setDesignOptions(DEFAULT_DESIGN_OPTIONS)}
-                    >
-                      <RotateCcw className="h-3 w-3 mr-2" />
-                      Reset to Default
-                    </Button>
-                  </div>
-                </div>
-              )}
               
               <div className="min-h-[calc(100vh-250px)] bg-gray-100 p-4 overflow-x-auto">
                 <div className="flex justify-center min-w-fit">
@@ -1029,132 +903,7 @@ export default function GeneratePage() {
                   <h3 className="font-medium text-gray-700">Original Resume</h3>
                   <p className="text-sm text-gray-500">This will be tailored with your selected keywords</p>
                 </div>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => setShowDesignPanel(!showDesignPanel)}
-                  className={showDesignPanel ? "bg-blue-50 border-blue-300" : ""}
-                >
-                  <Settings2 className="h-4 w-4 mr-2" />
-                  Edit Design
-                </Button>
               </div>
-              
-              {/* Design Panel */}
-              {showDesignPanel && (
-                <div className="bg-white border-b p-4 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-medium text-gray-800">Design Options</h4>
-                    <Button variant="ghost" size="sm" onClick={() => setShowDesignPanel(false)}>
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    {/* Header Alignment */}
-                    <div>
-                      <Label className="text-sm font-medium mb-2 block">Header Alignment</Label>
-                      <div className="flex gap-1">
-                        {(["left", "center", "right"] as HeaderAlignment[]).map((align) => (
-                          <Button
-                            key={align}
-                            variant={designOptions.headerAlignment === align ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setDesignOptions({ ...designOptions, headerAlignment: align })}
-                            className="flex-1 capitalize"
-                          >
-                            {align}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Margin Size */}
-                    <div>
-                      <Label className="text-sm font-medium mb-2 block">Margin Size</Label>
-                      <div className="flex gap-1">
-                        {MARGIN_SIZES.map((margin) => (
-                          <Button
-                            key={margin.value}
-                            variant={designOptions.marginSize === margin.value ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setDesignOptions({ ...designOptions, marginSize: margin.value })}
-                            className="flex-1 capitalize"
-                          >
-                            {margin.label}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Font Family */}
-                    <div>
-                      <Label className="text-sm font-medium mb-2 block">Font Family</Label>
-                      <select
-                        value={designOptions.fontFamily}
-                        onChange={(e) => setDesignOptions({ ...designOptions, fontFamily: e.target.value as FontFamily })}
-                        className="w-full border rounded-md px-3 py-2 text-sm"
-                      >
-                        {FONT_FAMILIES.map((font) => (
-                          <option key={font.value} value={font.value}>{font.label}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Font Size */}
-                    <div>
-                      <Label className="text-sm font-medium mb-2 block">
-                        Font Size: {designOptions.fontSize}px
-                      </Label>
-                      <input
-                        type="range"
-                        min="12"
-                        max="18"
-                        step="1"
-                        value={designOptions.fontSize}
-                        onChange={(e) => setDesignOptions({ ...designOptions, fontSize: Number(e.target.value) })}
-                        className="w-full"
-                      />
-                      <div className="flex justify-between text-xs text-gray-400 mt-1">
-                        <span>12px</span>
-                        <span>18px</span>
-                      </div>
-                    </div>
-
-                    {/* Line Height */}
-                    <div>
-                      <Label className="text-sm font-medium mb-2 block">
-                        Line Height: {designOptions.lineHeight.toFixed(1)}
-                      </Label>
-                      <input
-                        type="range"
-                        min="1"
-                        max="1.7"
-                        step="0.1"
-                        value={designOptions.lineHeight}
-                        onChange={(e) => setDesignOptions({ ...designOptions, lineHeight: Number(e.target.value) })}
-                        className="w-full"
-                      />
-                      <div className="flex justify-between text-xs text-gray-400 mt-1">
-                        <span>1.0</span>
-                        <span>1.7</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Reset button */}
-                  <div className="flex justify-end pt-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setDesignOptions(DEFAULT_DESIGN_OPTIONS)}
-                    >
-                      <RotateCcw className="h-3 w-3 mr-2" />
-                      Reset to Default
-                    </Button>
-                  </div>
-                </div>
-              )}
               
               <div className="min-h-[calc(100vh-250px)] bg-gray-100 p-4 overflow-x-auto">
                 <div className="flex justify-center min-w-fit">

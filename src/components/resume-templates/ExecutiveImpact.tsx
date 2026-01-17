@@ -42,6 +42,15 @@ function highlightText(text: string, keywords: string[]): React.ReactNode {
 }
 
 export default function ExecutiveImpact({ resume, designOptions = DEFAULT_DESIGN_OPTIONS, highlightKeywords = [] }: TemplateProps) {
+  const normalizeUrl = (url?: string) => {
+    if (!url) return "";
+    const trimmed = url.trim();
+    if (!trimmed) return "";
+    if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+      return trimmed;
+    }
+    return `https://${trimmed}`;
+  };
   const fontFamily = FONT_FAMILIES.find(f => f.value === designOptions.fontFamily)?.css || "Georgia, serif";
   const padding = MARGIN_SIZES.find(m => m.value === designOptions.marginSize)?.padding || "2rem";
   const alignmentClass = {
@@ -160,7 +169,19 @@ export default function ExecutiveImpact({ resume, designOptions = DEFAULT_DESIGN
             {resume.projects.map((project, idx) => (
               <div key={idx} data-resume-section className="bg-amber-50 p-3 rounded border-l-2 border-amber-600" style={{ breakInside: 'avoid' }}>
                 <h3 className="font-semibold text-gray-900" style={{ fontSize: `${smallFontSize}px` }}>{project.name}</h3>
-                {project.description && <p className="text-gray-700 mt-0.5" style={{ fontSize: `${smallFontSize}px` }}>{highlightText(project.description, highlightKeywords)}</p>}
+                {project.description && (
+                  <p className="text-gray-700 mt-0.5" style={{ fontSize: `${smallFontSize}px` }}>
+                    {highlightText(project.description, highlightKeywords)}
+                  </p>
+                )}
+                {project.url && (
+                  <div className="mt-0.5" style={{ fontSize: `${smallFontSize}px` }}>
+                    Live demo:{" "}
+                    <a href={normalizeUrl(project.url)} target="_blank" rel="noreferrer" className="text-amber-800 underline">
+                      {project.url}
+                    </a>
+                  </div>
+                )}
               </div>
             ))}
           </div>

@@ -282,7 +282,11 @@ export function generateResumeHTML({
 
     const projItems = resume.projects.map(proj => `
       <div style="margin-bottom: 6px;">
-        <span style="font-weight: 700; font-size: ${projectTitleSize}px; font-family: ${getFontFamily('projectTitle')};">${proj.name}</span>${proj.description ? `<span style="font-size: ${projectDescSize}px; font-family: ${getFontFamily('projectDescription')};">. ${proj.description}</span>` : ""}
+        <span style="font-weight: 700; font-size: ${projectTitleSize}px; font-family: ${getFontFamily('projectTitle')};">${proj.name}</span>
+        ${proj.description ? `<div style="margin-top: 2px; font-size: ${projectDescSize}px; font-family: ${getFontFamily('projectDescription')};">${proj.description}</div>` : ""}
+        ${proj.url ? `<div style="margin-top: 2px; font-size: ${projectDescSize}px; font-family: ${getFontFamily('projectDescription')};">
+          Live demo: <a href="${proj.url.startsWith('http://') || proj.url.startsWith('https://') ? proj.url : `https://${proj.url}`}" target="_blank" rel="noreferrer" style="color: #1d4ed8; text-decoration: underline;">${proj.url}</a>
+        </div>` : ""}
       </div>
     `).join('');
 

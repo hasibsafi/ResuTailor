@@ -42,6 +42,15 @@ function highlightText(text: string, keywords: string[]): React.ReactNode {
 }
 
 export default function ClassicATS({ resume, designOptions = DEFAULT_DESIGN_OPTIONS, highlightKeywords = [] }: ClassicATSProps) {
+  const normalizeUrl = (url?: string) => {
+    if (!url) return "";
+    const trimmed = url.trim();
+    if (!trimmed) return "";
+    if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+      return trimmed;
+    }
+    return `https://${trimmed}`;
+  };
   const fontFamily = FONT_FAMILIES.find(f => f.value === designOptions.fontFamily)?.css || FONT_FAMILIES[1].css;
   const padding = MARGIN_SIZES.find(m => m.value === designOptions.marginSize)?.padding || "2rem";
   const headingColor = HEADING_COLORS.find(c => c.value === designOptions.headingColor)?.hex || "#111827";
@@ -177,9 +186,21 @@ export default function ClassicATS({ resume, designOptions = DEFAULT_DESIGN_OPTI
             </h2>
             {orderedProjects.map((project, idx) => (
               <div key={idx} data-resume-section className="mb-1.5" style={{ breakInside: 'avoid' }}>
-                <span className="font-bold" style={{ fontSize: `${projectTitleSize}px`, fontFamily: getFontFamily('projectTitle') }}>{project.name}</span>
+                <span className="font-bold" style={{ fontSize: `${projectTitleSize}px`, fontFamily: getFontFamily('projectTitle') }}>
+                  {project.name}
+                </span>
                 {project.description && (
-                  <span style={{ fontSize: `${projectDescSize}px`, fontFamily: getFontFamily('projectDescription') }}>. {highlightText(project.description, highlightKeywords)}</span>
+                  <div className="mt-0.5" style={{ fontSize: `${projectDescSize}px`, fontFamily: getFontFamily('projectDescription') }}>
+                    {highlightText(project.description, highlightKeywords)}
+                  </div>
+                )}
+                {project.url && (
+                  <div className="mt-0.5" style={{ fontSize: `${projectDescSize}px`, fontFamily: getFontFamily('projectDescription') }}>
+                    Link:{" "}
+                    <a href={normalizeUrl(project.url)} target="_blank" rel="noreferrer" className="text-blue-700 underline">
+                      {project.url}
+                    </a>
+                  </div>
                 )}
               </div>
             ))}

@@ -35,6 +35,15 @@ function highlightText(text: string, keywords: string[]): React.ReactNode {
 }
 
 export default function HighlightedResume({ resume, keywords }: HighlightedResumeProps) {
+  const normalizeUrl = (url?: string) => {
+    if (!url) return "";
+    const trimmed = url.trim();
+    if (!trimmed) return "";
+    if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+      return trimmed;
+    }
+    return `https://${trimmed}`;
+  };
   return (
     <div className="p-8 max-w-[8.5in] mx-auto bg-white font-sans text-gray-800 print:p-0">
       {/* Header */}
@@ -199,14 +208,17 @@ export default function HighlightedResume({ resume, keywords }: HighlightedResum
             <div key={idx} className="mb-3">
               <h3 className="font-semibold text-gray-900">
                 {project.name}
-                {project.url && (
-                  <a href={project.url} className="text-green-600 text-sm ml-2 font-normal hover:underline">
-                    [Link]
-                  </a>
-                )}
               </h3>
               {project.description && (
-                <p className="text-sm text-gray-600">{highlightText(project.description, keywords)}</p>
+                <p className="text-sm text-gray-600 mt-0.5">{highlightText(project.description, keywords)}</p>
+              )}
+              {project.url && (
+                <div className="text-sm mt-0.5">
+                  Live demo:{" "}
+                  <a href={normalizeUrl(project.url)} target="_blank" rel="noreferrer" className="text-green-600 underline">
+                    {project.url}
+                  </a>
+                </div>
               )}
             </div>
           ))}

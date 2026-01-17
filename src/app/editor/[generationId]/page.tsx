@@ -866,6 +866,15 @@ export default function EditorPage() {
                       />
                     </div>
                     <div>
+                      <Label className="text-sm">Live Demo URL</Label>
+                      <Input
+                        value={proj.url || ""}
+                        onChange={(e) => updateProject(projIndex, { url: e.target.value || undefined })}
+                        className="mt-1"
+                        placeholder="https://example.com"
+                      />
+                    </div>
+                    <div>
                       <Label className="text-sm">Technologies (comma-separated)</Label>
                       <Input
                         value={proj.technologies?.join(", ") || ""}
