@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 
 function AuthErrorMessage(error: unknown) {
   const code = typeof error === "object" && error && "code" in error ? String(error.code) : "";
@@ -34,7 +34,7 @@ function AuthErrorMessage(error: unknown) {
   }
 }
 
-export default function LoginPage() {
+function LoginContent() {
   const { user, loading, signInWithGoogle, signInWithEmail, signUpWithEmail } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -160,5 +160,22 @@ export default function LoginPage() {
         </div>
       </Card>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+          <Card className="p-8 w-full max-w-md">
+            <div className="h-6 bg-gray-200 rounded w-2/3 mx-auto mb-3" />
+            <div className="h-4 bg-gray-100 rounded w-1/2 mx-auto" />
+          </Card>
+        </div>
+      }
+    >
+      <LoginContent />
+    </Suspense>
   );
 }
