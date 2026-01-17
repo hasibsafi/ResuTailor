@@ -62,6 +62,15 @@ export default function GeneratePage() {
   // Design options state
   const [designOptions, setDesignOptions] = useState<DesignOptions>(DEFAULT_DESIGN_OPTIONS);
 
+  const parseJsonSafely = async (response: Response) => {
+    const text = await response.text();
+    try {
+      return { data: JSON.parse(text), raw: text };
+    } catch {
+      return { data: null, raw: text };
+    }
+  };
+
   // Handle file upload
   const handleFileSelect = async (selectedFile: File) => {
     setFile(selectedFile);
@@ -81,12 +90,15 @@ export default function GeneratePage() {
         body: formData,
       });
 
+      const { data, raw } = await parseJsonSafely(response);
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to parse resume");
+        throw new Error((data && data.error) || "Failed to parse resume");
       }
 
-      const data = await response.json();
+      if (!data) {
+        throw new Error(raw || "Failed to parse resume");
+      }
+
       setParsedResume(data.parsedResume);
       setParseWarnings(data.warnings || []);
       setNeedsReview(data.needsReview || false);
