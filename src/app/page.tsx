@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { TEMPLATES } from "@/types/resume";
-import { FileText, Sparkles, Download, ArrowRight, CheckCircle } from "lucide-react";
+import { FileText, Sparkles, Download, ArrowRight, CheckCircle, UserCircle } from "lucide-react";
 import AuthButton from "@/components/auth/AuthButton";
 import { useAuth } from "@/components/auth/AuthProvider";
 
@@ -28,7 +28,8 @@ export default function HomePage() {
             </Link>
             {user && (
               <Link href="/profile" className="text-gray-600 hover:text-gray-900 transition">
-                Profile
+                <span className="sr-only">Profile</span>
+                <UserCircle className="h-6 w-6" />
               </Link>
             )}
             <Link href="/generate">

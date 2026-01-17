@@ -39,6 +39,14 @@ function formatDate(date?: Date) {
   });
 }
 
+function formatDateForFile(date?: Date) {
+  if (!date) return "unknown-date";
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function getFriendlyAccountError(error: unknown) {
   const code = typeof error === "object" && error && "code" in error ? String(error.code) : "";
   switch (code) {
@@ -95,7 +103,8 @@ export default function ProfilePage() {
     setExportingId(item.id);
     setError(null);
     try {
-      const fileName = `${formatDate(item.createdAt?.toDate())}-Resume.pdf`.replace(/\s+/g, "_");
+      const createdAt = item.createdAt?.toDate();
+      const fileName = `Tailored-Resume-${formatDateForFile(createdAt)}.pdf`;
       const response = await fetch("/api/export/pdf", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -218,7 +227,7 @@ export default function ProfilePage() {
                   >
                     <div>
                       <div className="font-medium text-gray-900">
-                        {formatDate(item.createdAt?.toDate())}
+                        Tailored Resume — {formatDate(item.createdAt?.toDate())}
                       </div>
                       <div className="text-sm text-gray-500">
                         Template: {item.template || "classic-ats"}

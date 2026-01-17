@@ -29,7 +29,7 @@ import {
   FontFamily,
   TEMPLATES
 } from "@/types/resume";
-import { Loader2, Sparkles, ArrowLeft, ArrowRight, Check, Plus, RotateCcw, Settings2, X, AlertTriangle, AlertCircle } from "lucide-react";
+import { Loader2, Sparkles, ArrowLeft, ArrowRight, Check, Plus, RotateCcw, Settings2, X, AlertTriangle, AlertCircle, UserCircle } from "lucide-react";
 
 type Step = "upload" | "analyze" | "generate";
 
@@ -420,45 +420,51 @@ export default function GeneratePage() {
             </div>
           </div>
 
-          {/* Action Button */}
-          {step === "upload" && (
-            <Button
-              onClick={handleAnalyze}
-              disabled={!canAnalyze || isAnalyzing}
-              size="lg"
-            >
-              {isAnalyzing ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Analyzing...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  Analyze Keywords
-                </>
-              )}
-            </Button>
-          )}
-          {step === "analyze" && (
-            <Button
-              onClick={handleGenerate}
-              disabled={isGenerating}
-              size="lg"
-            >
-              {isGenerating ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  Generate Tailored Resume
-                </>
-              )}
-            </Button>
-          )}
+          {/* Action Button + Profile */}
+          <div className="flex items-center gap-3">
+            {step === "upload" && (
+              <Button
+                onClick={handleAnalyze}
+                disabled={!canAnalyze || isAnalyzing}
+                size="lg"
+              >
+                {isAnalyzing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Analyzing...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Analyze Keywords
+                  </>
+                )}
+              </Button>
+            )}
+            {step === "analyze" && (
+              <Button
+                onClick={handleGenerate}
+                disabled={isGenerating}
+                size="lg"
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Generate Tailored Resume
+                  </>
+                )}
+              </Button>
+            )}
+            <Link href="/profile" className="text-gray-600 hover:text-gray-900">
+              <span className="sr-only">Profile</span>
+              <UserCircle className="h-6 w-6" />
+            </Link>
+          </div>
         </div>
       </header>
 

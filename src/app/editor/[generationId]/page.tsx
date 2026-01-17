@@ -47,7 +47,8 @@ import {
   ArrowUp,
   ArrowDown,
   FileText,
-  List
+  List,
+  UserCircle
 } from "lucide-react";
 
 // Font family select component
@@ -1401,6 +1402,10 @@ export default function EditorPage() {
             <Button onClick={handleSaveAndPreview}>
               Save & Preview
             </Button>
+            <Link href="/profile" className="text-gray-600 hover:text-gray-900">
+              <span className="sr-only">Profile</span>
+              <UserCircle className="h-6 w-6" />
+            </Link>
           </div>
         </div>
       </header>

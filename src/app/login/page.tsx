@@ -35,7 +35,7 @@ function AuthErrorMessage(error: unknown) {
 }
 
 function LoginContent() {
-  const { user, loading, signInWithGoogle, signInWithEmail } = useAuth();
+  const { user, loading, signInWithEmail } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const nextUrl = searchParams.get("next") || "/generate";
@@ -100,21 +100,6 @@ function LoginContent() {
             Sign in with email
           </Button>
         </div>
-
-        <div className="my-6 flex items-center gap-3">
-          <div className="h-px flex-1 bg-gray-200" />
-          <span className="text-xs text-gray-500">OR</span>
-          <div className="h-px flex-1 bg-gray-200" />
-        </div>
-
-        <Button
-          className="w-full"
-          onClick={() => signInWithGoogle()}
-          disabled={loading}
-          variant="outline"
-        >
-          Continue with Google
-        </Button>
 
         <div className="text-center text-sm text-gray-500 mt-4">
           <Link href="/" className="hover:text-gray-700">

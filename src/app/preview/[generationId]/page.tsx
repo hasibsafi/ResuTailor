@@ -26,7 +26,7 @@ import {
   HeaderAlignment,
   FontFamily
 } from "@/types/resume";
-import { ArrowLeft, Download, FileText, ChevronDown, ArrowRight, Eye, Settings2, X, RotateCcw, Loader2, Pencil, FileSignature } from "lucide-react";
+import { ArrowLeft, Download, FileText, ChevronDown, ArrowRight, Eye, Settings2, X, RotateCcw, Loader2, Pencil, FileSignature, UserCircle } from "lucide-react";
 import { buildCoverLetterFields, CoverLetterFields, CoverLetterStyles, generateCoverLetterHTML } from "@/lib/cover-letter";
 
 export default function PreviewPage() {
@@ -501,6 +501,10 @@ export default function PreviewPage() {
                 </>
               )}
             </Button>
+            <Link href="/profile" className="text-gray-600 hover:text-gray-900">
+              <span className="sr-only">Profile</span>
+              <UserCircle className="h-6 w-6" />
+            </Link>
           </div>
         </div>
       </header>
