@@ -286,12 +286,27 @@ export default function GeneratePage() {
         // Persist resume history to Firestore
         if (user) {
           try {
+            const pruneUndefined = (value: unknown): unknown => {
+              if (Array.isArray(value)) {
+                return value.map(pruneUndefined);
+              }
+              if (value && typeof value === "object") {
+                const entries = Object.entries(value as Record<string, unknown>)
+                  .filter(([, v]) => v !== undefined)
+                  .map(([k, v]) => [k, pruneUndefined(v)]);
+                return Object.fromEntries(entries);
+              }
+              return value;
+            };
+
+            const cleanedDesignOptions = pruneUndefined(designOptions) as DesignOptions;
+
             await addDoc(collection(db, "users", user.uid, "resumeHistory"), {
               generationId: data.generationId,
               createdAt: serverTimestamp(),
               template: selectedTemplate,
               accentColor: selectedAccentColor,
-              designOptions,
+              designOptions: cleanedDesignOptions,
               jobDescription: jobDescription.trim(),
               originalResume: parsedResume,
               tailoredResume: resumeWithUserKeywords,

@@ -655,6 +655,7 @@ export default function EditorPage() {
 
   // Render sections based on order
   const renderSection = (sectionKey: string, index: number) => {
+    if (!resume) return null;
     const Icon = SECTION_ICONS[sectionKey as SectionKey] || FileText;
     const canMoveUp = index > 0;
     const canMoveDown = index < sectionOrder.length - 1;
