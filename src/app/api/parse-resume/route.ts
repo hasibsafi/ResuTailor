@@ -62,8 +62,13 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Parse resume error:", error);
+    const message = error instanceof Error ? error.message : "Failed to parse resume";
+    const stack = error instanceof Error ? error.stack : undefined;
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to parse resume" },
+      {
+        error: message,
+        stack,
+      },
       { status: 500 }
     );
   }
