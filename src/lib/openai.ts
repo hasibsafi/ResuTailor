@@ -333,7 +333,39 @@ export interface ParseResumeResult {
   needsReview: boolean;
 }
 
-export async function parseResumeText(resumeText: string): Promise<ParseResumeResult> {
+const extractContactFallback = (resumeText: string) => {
+  const lines = resumeText.split("\n").map((line) => line.trim()).filter(Boolean);
+  const emailMatch = resumeText.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+  const phoneMatch = resumeText.match(/(\+?\d[\d\s().-]{7,}\d)/);
+  const linkedinMatch = resumeText.match(/https?:\/\/(?:www\.)?linkedin\.com\/[^\s)]+/i) || resumeText.match(/linkedin\.com\/[^\s)]+/i);
+  const githubMatch = resumeText.match(/https?:\/\/(?:www\.)?github\.com\/[^\s)]+/i) || resumeText.match(/github\.com\/[^\s)]+/i);
+
+  const nameCandidate = lines.find((line) => {
+    if (line.length < 4) return false;
+    if (line.match(/@/)) return false;
+    if (line.toUpperCase().startsWith("RESUME")) return false;
+    const wordCount = line.split(/\s+/).length;
+    return wordCount >= 2 && wordCount <= 4;
+  });
+
+  const normalizeUrl = (value?: string | null) => {
+    if (!value) return undefined;
+    const trimmed = value.trim();
+    if (!trimmed) return undefined;
+    if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) return trimmed;
+    return `https://${trimmed}`;
+  };
+
+  return {
+    name: nameCandidate,
+    email: emailMatch?.[0],
+    phone: phoneMatch?.[0],
+    linkedin: normalizeUrl(linkedinMatch?.[0]),
+    github: normalizeUrl(githubMatch?.[0]),
+  };
+};
+
+async function parseChunkWithOpenAI(text: string) {
   const response = await openai.chat.completions.create({
     model: "gpt-4.1",
     messages: [
@@ -343,7 +375,7 @@ export async function parseResumeText(resumeText: string): Promise<ParseResumeRe
       },
       {
         role: "user",
-        content: resumeText,
+        content: text,
       },
     ],
     response_format: { type: "json_object" },
@@ -356,12 +388,28 @@ export async function parseResumeText(resumeText: string): Promise<ParseResumeRe
     throw new Error("Empty response from OpenAI");
   }
 
-  console.log("OpenAI resume parse response:", content.substring(0, 500));
-  
-  const parsed = JSON.parse(content);
-  
+  return JSON.parse(content);
+}
+
+function mergeStringArrays(a?: string[], b?: string[]) {
+  const combined = [...(a || []), ...(b || [])];
+  const seen = new Set<string>();
+  return combined.filter((item) => {
+    const key = item.toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+export async function parseResumeText(resumeText: string): Promise<ParseResumeResult> {
+  const fallbackContact = extractContactFallback(resumeText);
+  const parsed = await parseChunkWithOpenAI(resumeText);
+
+  console.log("OpenAI resume parse response:", JSON.stringify(parsed).substring(0, 500));
+
   // Validate and provide defaults for optional arrays
-  const normalizedResume = {
+  const normalizedResume: Record<string, any> = {
     ...parsed,
     contact: parsed.contact || { name: "Unknown" },
     experience: parsed.experience || [],
@@ -371,9 +419,43 @@ export async function parseResumeText(resumeText: string): Promise<ParseResumeRe
     certifications: parsed.certifications || [],
   };
   
-  // Ensure contact.name exists
+  const normalizeStringArray = (value: unknown): string[] => {
+    if (!Array.isArray(value)) return [];
+    return value.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
+  };
+
+  const pruneNulls = (value: unknown): unknown => {
+    if (value === null || value === undefined) return undefined;
+    if (Array.isArray(value)) {
+      return value.map(pruneNulls).filter((item) => item !== undefined);
+    }
+    if (typeof value === "object") {
+      const entries = Object.entries(value as Record<string, unknown>)
+        .map(([key, val]) => [key, pruneNulls(val)] as const)
+        .filter(([, val]) => val !== undefined && val !== "");
+      return Object.fromEntries(entries);
+    }
+    return value;
+  };
+
+  // Ensure contact.name exists (use fallback if missing)
   if (!normalizedResume.contact.name) {
-    normalizedResume.contact.name = "Unknown";
+    normalizedResume.contact.name = fallbackContact.name || "Unknown";
+  }
+
+  // Merge fallback contact details if missing
+  const contactRecord = normalizedResume.contact as Record<string, unknown>;
+  if (!contactRecord.email || contactRecord.email === "Unknown") {
+    contactRecord.email = fallbackContact.email || undefined;
+  }
+  if (!contactRecord.phone || contactRecord.phone === "Unknown") {
+    contactRecord.phone = fallbackContact.phone || undefined;
+  }
+  if (!contactRecord.linkedin || contactRecord.linkedin === "Unknown") {
+    contactRecord.linkedin = fallbackContact.linkedin || undefined;
+  }
+  if (!contactRecord.github || contactRecord.github === "Unknown") {
+    contactRecord.github = fallbackContact.github || undefined;
   }
   
   // Ensure experience entries have required fields and convert null to undefined
@@ -391,6 +473,40 @@ export async function parseResumeText(resumeText: string): Promise<ParseResumeRe
     }
     return result;
   });
+
+  // Deduplicate identical experience entries (same company/title/highlights)
+  const scoreExperience = (exp: Record<string, unknown>) => {
+    const isKnown = (value?: unknown, unknownValue?: string) =>
+      typeof value === "string" && value.trim().length > 0 && value !== unknownValue;
+    let score = 0;
+    if (isKnown(exp.company, "Unknown Company")) score += 2;
+    if (isKnown(exp.title, "Unknown Title")) score += 2;
+    if (isKnown(exp.startDate, "Unknown")) score += 1;
+    if (isKnown(exp.endDate)) score += 1;
+    if (isKnown(exp.location, "Unknown")) score += 1;
+    return score;
+  };
+
+  const dedupeExperience = (items: Record<string, unknown>[]) => {
+    const seen = new Map<string, Record<string, unknown>>();
+    for (const exp of items) {
+      const highlights = Array.isArray(exp.highlights) ? exp.highlights : [];
+      const key = `${String(exp.company)}::${String(exp.title)}::${highlights.join("|")}`;
+      const existing = seen.get(key);
+      if (!existing) {
+        seen.set(key, exp);
+        continue;
+      }
+      const existingScore = scoreExperience(existing);
+      const nextScore = scoreExperience(exp);
+      if (nextScore > existingScore) {
+        seen.set(key, exp);
+      }
+    }
+    return Array.from(seen.values());
+  };
+
+  normalizedResume.experience = dedupeExperience(normalizedResume.experience);
   
   // Ensure education entries have required fields and convert null to undefined
   normalizedResume.education = normalizedResume.education.map((edu: Record<string, unknown>) => {
@@ -399,7 +515,7 @@ export async function parseResumeText(resumeText: string): Promise<ParseResumeRe
       degree: edu.degree || "Unknown Degree",
       field: edu.field,
       location: edu.location,
-      gpa: edu.gpa,
+      gpa: typeof edu.gpa === "number" ? String(edu.gpa) : edu.gpa,
       highlights: edu.highlights,
     };
     // Only include dates if they're non-null strings
@@ -409,12 +525,31 @@ export async function parseResumeText(resumeText: string): Promise<ParseResumeRe
     if (edu.endDate && typeof edu.endDate === 'string') {
       result.endDate = edu.endDate;
     }
+    if (result.gpa === null || result.gpa === "") {
+      delete result.gpa;
+    }
     return result;
   });
   
+  // Normalize projects to avoid nulls and invalid types
+  normalizedResume.projects = (normalizedResume.projects || []).map((proj: Record<string, unknown>) => {
+    const result: Record<string, unknown> = {
+      name: typeof proj.name === "string" && proj.name.trim().length > 0 ? proj.name : "Untitled Project",
+      description: typeof proj.description === "string" ? proj.description : undefined,
+      url: proj.url,
+      technologies: normalizeStringArray(proj.technologies),
+      highlights: normalizeStringArray(proj.highlights),
+    };
+    return result;
+  });
+
   // Clean up project URLs to avoid invalid URL validation errors
   normalizedResume.projects = (normalizedResume.projects || []).map((proj: Record<string, unknown>) => {
     const result: Record<string, unknown> = { ...proj };
+    if (result.url === null) {
+      delete result.url;
+      return result;
+    }
     if (result.url && typeof result.url === "string") {
       let url = result.url.trim();
       
@@ -441,6 +576,23 @@ export async function parseResumeText(resumeText: string): Promise<ParseResumeRe
     }
     return result;
   });
+
+  // Normalize skills arrays
+  normalizedResume.skills = {
+    ...normalizedResume.skills,
+    technical: normalizeStringArray(normalizedResume.skills?.technical),
+    frameworks: normalizeStringArray(normalizedResume.skills?.frameworks),
+    tools: normalizeStringArray(normalizedResume.skills?.tools),
+    languages: normalizeStringArray(normalizedResume.skills?.languages),
+    soft: normalizeStringArray(normalizedResume.skills?.soft),
+    other: normalizeStringArray(normalizedResume.skills?.other),
+  };
+
+  // Drop nulls/empty strings throughout
+  const pruned = pruneNulls(normalizedResume) as typeof normalizedResume;
+  
+  // Re-assign after pruning
+  Object.assign(normalizedResume, pruned);
   
   console.log("Normalized resume:", JSON.stringify(normalizedResume, null, 2).substring(0, 1000));
   
@@ -490,7 +642,44 @@ export async function parseResumeText(resumeText: string): Promise<ParseResumeRe
   delete normalizedResume._parseWarnings;
   
   // Check for signs that parsing may be incomplete
-  const warnings: string[] = [...parseWarnings];
+  const hasContact = Boolean(normalizedResume.contact && normalizedResume.contact.name && normalizedResume.contact.name !== "Unknown");
+  const hasSummary = Boolean(normalizedResume.summary && String(normalizedResume.summary).trim().length > 0);
+  const hasExperience = Array.isArray(normalizedResume.experience) && normalizedResume.experience.length > 0;
+  const hasEducation = Array.isArray(normalizedResume.education) && normalizedResume.education.length > 0;
+  const hasSkills = Boolean(normalizedResume.skills && Object.values(normalizedResume.skills).some((val) => Array.isArray(val) && val.length > 0));
+  const hasProjects = Array.isArray(normalizedResume.projects) && normalizedResume.projects.length > 0;
+  const hasCertifications = Array.isArray(normalizedResume.certifications) && normalizedResume.certifications.length > 0;
+
+  const shouldKeepWarning = (warning: string) => {
+    const normalized = warning.toLowerCase();
+    if (hasContact && normalized.includes("no contact")) return false;
+    if (hasSummary && normalized.includes("no summary")) return false;
+    if (hasExperience && normalized.includes("no work experience")) return false;
+    if (hasEducation && normalized.includes("no education")) return false;
+    if (hasSkills && normalized.includes("no skills")) return false;
+    if (hasProjects && normalized.includes("no projects")) return false;
+    if (hasCertifications && normalized.includes("no certifications")) return false;
+    if ((hasSummary || hasExperience || hasEducation || hasSkills || hasProjects || hasCertifications) && normalized.includes("only contact")) {
+      return false;
+    }
+    if (hasContact && normalized.includes("name not found")) return false;
+    if (normalized.includes("no explicit") && (hasSkills || hasProjects || hasExperience || hasEducation)) {
+      return false;
+    }
+    return true;
+  };
+
+  const warnings: string[] = [];
+  const seenWarnings = new Set<string>();
+  for (const warning of parseWarnings) {
+    const trimmed = warning.trim();
+    if (!trimmed) continue;
+    if (!shouldKeepWarning(trimmed)) continue;
+    const key = trimmed.toLowerCase();
+    if (seenWarnings.has(key)) continue;
+    seenWarnings.add(key);
+    warnings.push(trimmed);
+  }
   let needsReview = false;
   
   if (normalizedResume.contact?.name === "Unknown") {
