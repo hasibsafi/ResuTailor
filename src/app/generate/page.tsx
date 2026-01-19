@@ -85,7 +85,9 @@ export default function GeneratePage() {
       const formData = new FormData();
       formData.append("file", selectedFile);
 
-      const response = await fetch("/api/parse-resume", {
+      const apiBaseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL || "").replace(/\/+$/, "");
+      const parseUrl = apiBaseUrl ? `${apiBaseUrl}/api/parse-resume` : "/api/parse-resume";
+      const response = await fetch(parseUrl, {
         method: "POST",
         body: formData,
       });
