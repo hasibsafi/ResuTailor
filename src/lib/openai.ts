@@ -5,11 +5,22 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+const normalizeLocation = (value: unknown) => {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.toLowerCase() === "unknown") return undefined;
+  return trimmed;
+};
+
+const stripUrlScheme = (value: string) => value.replace(/^https?:\/\//i, "");
+
 const TAILORING_SYSTEM_PROMPT = `You are an elite professional resume writer with decades of experience crafting resumes that get candidates hired at top companies. Your job is to SIGNIFICANTLY REWRITE and tailor a resume to match a specific job description.
 
 CRITICAL RULES:
 1. NEVER invent new employers, job titles, degrees, or certifications that are not in the original resume.
 2. NEVER fabricate experience or qualifications.
+3. NEVER repeat same keyword all over the resume.
 
 WRITING STYLE - SOUND HUMAN, NOT AI:
 - Write in natural, professional language that real humans use - NOT robotic AI-generated text
@@ -18,28 +29,60 @@ WRITING STYLE - SOUND HUMAN, NOT AI:
 - Avoid buzzwords and clichés like "leverage", "synergy", "cutting-edge", "spearheaded"
 - Write like a confident professional describing their accomplishments, not a marketing brochure
 
-ACHIEVEMENT ARCHITECTURE - Structure every bullet point using this formula:
-- **Result + Metric + Context** format:
-  * RESULT: What changed or improved because of your work
-  * METRIC: Specific numbers that prove the impact (%, $, time saved, users, etc.)
-  * CONTEXT: Brief explanation of how you achieved it and what you did
-- Example: "Reduced page load time by 40% (from 3.2s to 1.9s) by implementing lazy loading and optimizing database queries"
+ACHIEVEMENT ARCHITECTURE (TAR):
+Use this formula for every bullet point:
+(Action verb) + (Task) + (Result)
+
+Action verbs (must start with one of these and try not use the same action verb more than once if possible.):
+Assembled, Built, Calculated, Computed, Designed, Devised, Maintained, Operated, Pinpointed, Programmed, Remodeled, Repaired, Solved
+
+TASK:
+- What you built, improved, or delivered
+- Technologies, tools, or methods used (only if accurate)
+- Scope of ownership (feature, service, workflow, dataset, system)
+- Collaboration or integration points when relevant
+
+RESULT:
+- Clear impact or outcome
+- Metrics are optional; use qualitative results if numbers are unknown
+- Never fabricate metrics or tools
+
+Constraints:
+- 1–2 lines per bullet
+- No buzzwords without substance
+- No invented technologies, responsibilities, or outcomes
+- Each bullet must answer: “Why did this matter?”
+- Mirror keywords and phrasing from the target job description when truthful
+
+Example:
+“Built a feature‑flagged onboarding flow that improved activation and reduced drop‑off.”
 
 BULLET POINT RULES:
 - Keep each position to a MAXIMUM of 4 bullet points - quality over quantity
-- The FIRST bullet point of each position MUST include a quantifiable metric
-- Subsequent bullets can omit metrics if they don't add value or if the achievement doesn't lend itself to quantification
 - Focus on the MOST RELEVANT achievements that align with the target job description
 - Keep bullets brief and impactful - 1-2 lines max, no fluff
-- Use strong action verbs: Delivered, Engineered, Transformed, Accelerated, Optimized, Architected
+- Start each bullet with a required action verb (list above)
 - Prioritize business impact and outcomes over task descriptions
+- Write the bullets in the present tense for current jobs, and past tense for previous positions
+
+PROJECT RULES:
+- Each project MUST include 3-4 bullet points in "highlights"
+- Do NOT leave projects with a single bullet
+- Do NOT use the same action verb more than once in a single project. 
+- Do NOT include metrics in project bullets
+- Use the project's description as the primary source for bullet content
+- Weave selected keywords naturally into project bullets when relevant
+- DO NOT include metrics and numbers in the project descirption. These are my projects and need to show
+
 
 SUMMARY WRITING:
+- The summary statement is an optional section, however you can utilize this section to tell how your skills and experience make you a fit for the position. A summary should be 3-5 lines long and highlight key skills related to the position
 - Write a brief, impactful summary of MAXIMUM 2-4 sentences (no more than 4 sentences)
 - Lead with years of experience and core expertise area
-- Highlight 2-3 key accomplishments or specializations relevant to the target role
 - Sound confident and accomplished, not desperate or generic
 - Keep it concise - recruiters spend only seconds scanning summaries
+- Above all, be human and natural.
+- Do not use "known for" or "Brings" in the summary. You must rephrase it in a way that doesn't use "known for" in the summary.
 
 KEYWORD INTEGRATION:
 - The user has pre-selected specific keywords in "selectedKeywords" that MUST ALL appear in the final resume
@@ -50,9 +93,9 @@ SKILLS SECTION RULES:
 - The skills section displays as a SINGLE comma-separated list of technical keywords
 - Put ALL technical skills (programming languages, frameworks, tools, technologies) into skills.technical, skills.frameworks, skills.tools, or skills.languages
 - DO NOT include soft skills (like "communication", "leadership", "teamwork", "problem-solving", "collaboration") in the skills section
-- SOFT SKILLS should be naturally woven into the summary and experience bullet points instead
-- Example: Instead of listing "leadership" as a skill, write a bullet like "Led a team of 5 engineers to deliver..."
+- SOFT SKILLS should be naturally woven into the summary instead
 - If a technical keyword doesn't fit in a specific category, add it to skills.other
+
 
 OUTPUT REQUIREMENTS:
 - Output ONLY valid JSON matching the schema below. No explanations or markdown.
@@ -66,7 +109,7 @@ REQUIRED OUTPUT SCHEMA:
   "experience": [{ "company": "string", "title": "string", "startDate": "string", "endDate": "string or omit if current", "location": "string", "highlights": ["Achievement-focused bullets using Result + Metric + Context"] }],
   "education": [{ "institution": "string", "degree": "string", "field": "string", "endDate": "string" }],
   "skills": { "technical": ["skills"], "frameworks": ["frameworks"], "tools": ["tools"], "languages": ["languages"], "soft": [], "other": ["remaining technical keywords"] },
-  "projects": [{ "name": "string", "description": "string", "technologies": ["tech"] }],
+  "projects": [{ "name": "string", "description": "string", "technologies": ["tech"], "highlights": ["3-4 bullets"] }],
   "certifications": [{ "name": "string", "issuer": "string", "date": "string" }],
   "matchedKeywords": ["all selectedKeywords plus extras"],
   "missingKeywords": ["only keywords NOT selected that couldn't be incorporated"]
@@ -125,7 +168,7 @@ export async function tailorResume(
       const result: Record<string, unknown> = {
         company: exp.company || "Unknown Company",
         title: exp.title || "Unknown Title",
-        location: exp.location,
+        location: normalizeLocation(exp.location),
         startDate: exp.startDate || "Unknown",
         highlights: exp.highlights || [],
       };
@@ -139,7 +182,7 @@ export async function tailorResume(
         institution: edu.institution || "Unknown Institution",
         degree: edu.degree || "Unknown Degree",
         field: edu.field,
-        location: edu.location,
+        location: normalizeLocation(edu.location),
         gpa: edu.gpa,
         highlights: edu.highlights,
       };
@@ -171,13 +214,83 @@ export async function tailorResume(
       }
     }
     
-    // Add missing keywords to skills.other
+    // Add missing keywords to skills buckets
     if (missingFromResume.length > 0) {
-      console.log("Adding missing selectedKeywords to skills.other:", missingFromResume);
+      console.log("Adding missing selectedKeywords to skills:", missingFromResume);
       const skills = normalizedResume.skills as Record<string, string[] | undefined>;
-      skills.other = [...(skills.other || []), ...missingFromResume];
-      // Remove duplicates
-      skills.other = [...new Set(skills.other)];
+      skills.languages = skills.languages || [];
+      skills.frameworks = skills.frameworks || [];
+      skills.tools = skills.tools || [];
+      skills.other = skills.other || [];
+
+      const languageSet = new Set([
+        "javascript",
+        "typescript",
+        "python",
+        "java",
+        "c",
+        "c++",
+        "c#",
+        "go",
+        "golang",
+        "ruby",
+        "php",
+        "swift",
+        "kotlin",
+        "rust",
+        "scala",
+        "sql",
+        "bash",
+        "shell",
+      ]);
+      const frameworkSet = new Set([
+        "react",
+        "next.js",
+        "nextjs",
+        "angular",
+        "vue",
+        "svelte",
+        "tailwind",
+        "tailwind css",
+        "fastapi",
+        "django",
+        "flask",
+        "spring",
+        "node.js",
+        "nodejs",
+        "express",
+        "nestjs",
+      ]);
+      const toolSet = new Set([
+        "git",
+        "github",
+        "git workflow",
+        "docker",
+        "firebase",
+        "firestore",
+        "firebase admin sdk",
+        "google recaptcha",
+        "ci/cd",
+        "serverless",
+        "serverless api routes",
+        "restful apis",
+        "api integrations",
+        "postgresql",
+        "nosql",
+      ]);
+
+      const pushUnique = (arr: string[], value: string) => {
+        if (!arr.includes(value)) arr.push(value);
+      };
+
+      missingFromResume.forEach((keyword) => {
+        const key = keyword.trim().toLowerCase();
+        if (!key) return;
+        if (languageSet.has(key)) pushUnique(skills.languages as string[], keyword);
+        else if (frameworkSet.has(key)) pushUnique(skills.frameworks as string[], keyword);
+        else if (toolSet.has(key)) pushUnique(skills.tools as string[], keyword);
+        else pushUnique(skills.other as string[], keyword);
+      });
     }
   }
   
@@ -206,18 +319,17 @@ export async function tailorResume(
           return;
         }
         
-        // Add https:// if missing
-        if (!url.startsWith('http://') && !url.startsWith('https://')) {
-          url = 'https://' + url;
-        }
-        
-        // Validate it's a proper URL
-        try {
-          new URL(url);
-          contact[field] = url;
-        } catch {
-          // Invalid URL, remove the field
-          delete contact[field];
+        // Only validate URLs that already include a scheme
+        if (url.startsWith("http://") || url.startsWith("https://")) {
+          try {
+            new URL(url);
+            contact[field] = stripUrlScheme(url);
+          } catch {
+            // Invalid URL, remove the field
+            delete contact[field];
+          }
+        } else {
+          contact[field] = stripUrlScheme(url);
         }
       } else if (value) {
         // Non-string value, remove it
@@ -352,8 +464,7 @@ const extractContactFallback = (resumeText: string) => {
     if (!value) return undefined;
     const trimmed = value.trim();
     if (!trimmed) return undefined;
-    if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) return trimmed;
-    return `https://${trimmed}`;
+    return trimmed;
   };
 
   return {
@@ -457,13 +568,21 @@ export async function parseResumeText(resumeText: string): Promise<ParseResumeRe
   if (!contactRecord.github || contactRecord.github === "Unknown") {
     contactRecord.github = fallbackContact.github || undefined;
   }
+  if ("location" in contactRecord) {
+    const cleanedLocation = normalizeLocation(contactRecord.location);
+    if (cleanedLocation) {
+      contactRecord.location = cleanedLocation;
+    } else {
+      delete contactRecord.location;
+    }
+  }
   
   // Ensure experience entries have required fields and convert null to undefined
   normalizedResume.experience = normalizedResume.experience.map((exp: Record<string, unknown>) => {
     const result: Record<string, unknown> = {
       company: exp.company || "Unknown Company",
       title: exp.title || "Unknown Title",
-      location: exp.location,
+      location: normalizeLocation(exp.location),
       startDate: exp.startDate || "Unknown",
       highlights: exp.highlights || [],
     };
@@ -514,7 +633,7 @@ export async function parseResumeText(resumeText: string): Promise<ParseResumeRe
       institution: edu.institution || "Unknown Institution",
       degree: edu.degree || "Unknown Degree",
       field: edu.field,
-      location: edu.location,
+      location: normalizeLocation(edu.location),
       gpa: typeof edu.gpa === "number" ? String(edu.gpa) : edu.gpa,
       highlights: edu.highlights,
     };
@@ -551,31 +670,45 @@ export async function parseResumeText(resumeText: string): Promise<ParseResumeRe
       return result;
     }
     if (result.url && typeof result.url === "string") {
-      let url = result.url.trim();
-      
-      // If it's just a placeholder or too short, drop it
-      if (!url.includes(".") || url.length < 10) {
+      const url = result.url.trim();
+      if (!url) {
         delete result.url;
         return result;
       }
-      
-      // Add https:// if missing
-      if (!url.startsWith("http://") && !url.startsWith("https://")) {
-        url = "https://" + url;
-      }
-      
-      // Validate URL
-      try {
-        new URL(url);
-        result.url = url;
-      } catch {
-        delete result.url;
-      }
+      // Preserve user-provided URL as-is (strip scheme for display consistency)
+      result.url = stripUrlScheme(url);
     } else if (result.url) {
       delete result.url;
     }
     return result;
   });
+
+  // Ensure each project has 3-4 highlight bullets
+  const ensureProjectHighlights = (proj: Record<string, unknown>) => {
+    const highlights = normalizeStringArray(proj.highlights);
+    const description = typeof proj.description === "string" ? proj.description : "";
+    const sentences = description
+      .split(/[.!?]+/g)
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    const merged = [...highlights];
+    for (const sentence of sentences) {
+      if (merged.length >= 4) break;
+      if (!merged.includes(sentence)) merged.push(sentence);
+    }
+
+    if (merged.length > 4) return merged.slice(0, 4);
+    while (merged.length > 0 && merged.length < 3) {
+      merged.push(merged[merged.length - 1]);
+    }
+    return merged;
+  };
+
+  normalizedResume.projects = (normalizedResume.projects || []).map((proj: Record<string, unknown>) => ({
+    ...proj,
+    highlights: ensureProjectHighlights(proj),
+  }));
 
   // Normalize skills arrays
   normalizedResume.skills = {
@@ -587,6 +720,107 @@ export async function parseResumeText(resumeText: string): Promise<ParseResumeRe
     soft: normalizeStringArray(normalizedResume.skills?.soft),
     other: normalizeStringArray(normalizedResume.skills?.other),
   };
+
+  // Re-bucket skills so Languages only contains actual languages
+  const languageSet = new Set([
+    "javascript",
+    "typescript",
+    "python",
+    "java",
+    "c",
+    "c++",
+    "c#",
+    "go",
+    "golang",
+    "ruby",
+    "php",
+    "swift",
+    "kotlin",
+    "rust",
+    "scala",
+    "sql",
+    "bash",
+    "shell",
+  ]);
+  const frameworkSet = new Set([
+    "react",
+    "next.js",
+    "nextjs",
+    "angular",
+    "vue",
+    "svelte",
+    "tailwind",
+    "tailwind css",
+    "fastapi",
+    "django",
+    "flask",
+    "spring",
+    "node.js",
+    "nodejs",
+    "express",
+    "nestjs",
+  ]);
+  const toolSet = new Set([
+    "git",
+    "github",
+    "git workflow",
+    "docker",
+    "firebase",
+    "firestore",
+    "firebase admin sdk",
+    "google recaptcha",
+    "ci/cd",
+    "serverless",
+    "serverless api routes",
+    "restful apis",
+    "api integrations",
+    "postgresql",
+    "nosql",
+    "sql",
+  ]);
+
+  const bucketSkill = (value: string) => {
+    const key = value.trim().toLowerCase();
+    if (!key) return "other";
+    if (languageSet.has(key)) return "languages";
+    if (frameworkSet.has(key)) return "frameworks";
+    if (toolSet.has(key)) return "tools";
+    return "other";
+  };
+
+  const combined = [
+    ...normalizedResume.skills.languages,
+    ...normalizedResume.skills.technical,
+  ];
+
+  if (combined.length > 0) {
+    const nextLanguages = new Set(normalizedResume.skills.languages);
+    const nextFrameworks = new Set(normalizedResume.skills.frameworks);
+    const nextTools = new Set(normalizedResume.skills.tools);
+    const nextOther = new Set(normalizedResume.skills.other);
+
+    combined.forEach((item) => {
+      const bucket = bucketSkill(item);
+      if (bucket === "languages") nextLanguages.add(item);
+      else if (bucket === "frameworks") nextFrameworks.add(item);
+      else if (bucket === "tools") nextTools.add(item);
+      else nextOther.add(item);
+    });
+
+    normalizedResume.skills.languages = Array.from(nextLanguages);
+    normalizedResume.skills.frameworks = Array.from(nextFrameworks);
+    normalizedResume.skills.tools = Array.from(nextTools);
+    normalizedResume.skills.other = Array.from(nextOther);
+    normalizedResume.skills.technical = [];
+  }
+
+  // Always include core languages in the Languages row
+  const mustHaveLanguages = ["TypeScript", "SQL", "Python", "JavaScript", "C++", "C"];
+  mustHaveLanguages.forEach((lang) => {
+    if (!normalizedResume.skills.languages.includes(lang)) {
+      normalizedResume.skills.languages.push(lang);
+    }
+  });
 
   // Drop nulls/empty strings throughout
   const pruned = pruneNulls(normalizedResume) as typeof normalizedResume;
@@ -617,18 +851,17 @@ export async function parseResumeText(resumeText: string): Promise<ParseResumeRe
           return;
         }
         
-        // Add https:// if missing
-        if (!url.startsWith('http://') && !url.startsWith('https://')) {
-          url = 'https://' + url;
-        }
-        
-        // Validate it's a proper URL
-        try {
-          new URL(url);
-          contact[field] = url;
-        } catch {
-          // Invalid URL, remove the field
-          delete contact[field];
+        // Only validate URLs that already include a scheme
+        if (url.startsWith("http://") || url.startsWith("https://")) {
+          try {
+            new URL(url);
+            contact[field] = stripUrlScheme(url);
+          } catch {
+            // Invalid URL, remove the field
+            delete contact[field];
+          }
+        } else {
+          contact[field] = stripUrlScheme(url);
         }
       } else if (value) {
         // Non-string value, remove it

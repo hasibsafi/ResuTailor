@@ -5,7 +5,7 @@ import { generateResumeHTML } from "@/components/resume-templates/ResumeTemplate
 
 export async function POST(request: NextRequest) {
   try {
-    const { resume, designOptions, template, accentColor, fileName } = await request.json();
+    const { resume, designOptions, template, fileName } = await request.json();
     
     if (!resume) {
       return NextResponse.json(
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
       headerAlignment: 'left',
       marginSize: 'medium',
       fontFamily: 'sans',
-      fontSize: 12,
+      fontSize: 13.5,
       lineHeight: 1.4,
       headingColor: 'black',
     };
@@ -27,7 +27,6 @@ export async function POST(request: NextRequest) {
     const fullHTML = generateResumeHTML({
       resume: resume as TailoredResume,
       template: (template || 'classic-ats') as TemplateSlug,
-      accentColor: accentColor || 'purple',
       designOptions: options,
     });
 

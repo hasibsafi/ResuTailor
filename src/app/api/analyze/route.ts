@@ -7,40 +7,40 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-const ANALYZE_KEYWORDS_PROMPT = `You are a keyword matching expert. Analyze the resume against the job description to identify keywords in TWO categories:
+const ANALYZE_KEYWORDS_PROMPT = `You are a keyword matching expert. Analyze the resume against the job description to identify keywords.
+
+CRITICAL RULES:
+- ONLY return keywords that ACTUALLY APPEAR in the job description text.
+- Do NOT invent or suggest keywords that are not explicitly mentioned in the job description.
+- If the job description is vague, short, or nonsensical, return fewer or zero keywords. Do NOT pad the lists.
+
+TWO CATEGORIES:
 
 TECHNICAL KEYWORDS (for the Skills section):
-- Programming languages (Python, JavaScript, Java, etc.)
-- Frameworks and libraries (React, Node.js, Django, etc.)
-- Tools and platforms (AWS, Docker, Git, etc.)
-- Databases (PostgreSQL, MongoDB, etc.)
-- Technical methodologies (Agile, Scrum, CI/CD, etc.)
-- Certifications and technical qualifications
+- Programming languages, frameworks, libraries, tools, platforms, databases, methodologies, certifications
+- ONLY if they appear in the job description
 
 SOFT SKILLS (to weave into experience/summary):
-- Communication, leadership, teamwork
-- Problem-solving, analytical thinking
-- Project management, collaboration
-- Adaptability, attention to detail
-- Customer service, stakeholder management
+- Communication, leadership, teamwork, problem-solving, collaboration, etc.
+- ONLY if they appear in the job description
 
 For each category, identify:
-1. matched: Keywords in BOTH resume and job description
-2. missing: Keywords in job description but NOT in resume
+1. matched: Keywords found in BOTH the resume AND the job description
+2. missing: Keywords found in the job description but NOT in the resume
 
 Output ONLY valid JSON:
 {
   "technical": {
-    "matched": ["React", "TypeScript", "AWS", ...],
-    "missing": ["Kubernetes", "GraphQL", ...]
+    "matched": ["React", "TypeScript", ...],
+    "missing": ["Kubernetes", ...]
   },
   "soft": {
-    "matched": ["leadership", "collaboration", ...],
+    "matched": ["collaboration", ...],
     "missing": ["stakeholder management", ...]
   }
 }
 
-Be thorough - include 5-15 keywords per section when possible.`;
+If the job description contains no identifiable keywords, return empty arrays.`;
 
 export async function POST(request: NextRequest) {
   try {

@@ -14,7 +14,7 @@ import { RequireAuth } from "@/components/auth/RequireAuth";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { ResumeTemplate, ACCENT_COLORS, AccentColor } from "@/components/resume-templates";
+import { ResumeTemplate } from "@/components/resume-templates";
 import { PagedResumePreview } from "@/components/PagedResumePreview";
 import { 
   TemplateSlug, 
@@ -27,7 +27,6 @@ import {
   MARGIN_SIZES,
   HeaderAlignment,
   FontFamily,
-  TEMPLATES
 } from "@/types/resume";
 import { Loader2, Sparkles, ArrowLeft, ArrowRight, Check, Plus, RotateCcw, X, AlertTriangle, AlertCircle, UserCircle } from "lucide-react";
 
@@ -46,8 +45,7 @@ export default function GeneratePage() {
   const [parseWarnings, setParseWarnings] = useState<string[]>([]);
   const [needsReview, setNeedsReview] = useState(false);
   const [jobDescription, setJobDescription] = useState("");
-  const [selectedTemplate, setSelectedTemplate] = useState<TemplateSlug>("classic-ats");
-  const [selectedAccentColor, setSelectedAccentColor] = useState<AccentColor>("purple");
+  const [selectedTemplate] = useState<TemplateSlug>("classic-ats");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -318,7 +316,6 @@ export default function GeneratePage() {
               generationId: data.generationId,
               createdAt: serverTimestamp(),
               template: selectedTemplate,
-              accentColor: selectedAccentColor,
               designOptions: cleanedDesignOptions,
               jobDescription: jobDescription.trim(),
               originalResume: parsedResume,
@@ -334,11 +331,13 @@ export default function GeneratePage() {
         sessionStorage.setItem(`resume-${data.generationId}`, JSON.stringify(resumeWithUserKeywords));
         sessionStorage.setItem(`original-${data.generationId}`, JSON.stringify(parsedResume));
         sessionStorage.setItem(`template-${data.generationId}`, selectedTemplate);
-        sessionStorage.setItem(`accent-${data.generationId}`, selectedAccentColor);
         // Also store which keywords were user-added for the preview page
         sessionStorage.setItem(`added-${data.generationId}`, JSON.stringify(selectedMissingKeywords));
         // Store job description for potential regeneration
         sessionStorage.setItem(`jobDescription-${data.generationId}`, jobDescription.trim());
+        if (typeof window !== "undefined") {
+          localStorage.setItem(`jobDescription-${data.generationId}`, jobDescription.trim());
+        }
         router.push(`/preview/${data.generationId}`);
       }
     } catch (err) {
@@ -570,49 +569,9 @@ export default function GeneratePage() {
 
             {/* Right Panel - Resume Preview */}
             <div className="bg-white rounded-lg border overflow-hidden">
-              {/* Template Selector - Compact inline */}
+              {/* Template Selector */}
               <div className="bg-white border-b px-4 py-3">
-                <div className="flex items-center justify-between mb-2">
-                  <Label className="text-sm font-medium text-gray-700">Choose Template</Label>
-                  <div className="flex items-center gap-2">
-                    {/* Accent Color Picker - Only show for Tech template */}
-                    {selectedTemplate === "tech-focused" && (
-                      <div className="flex gap-1.5">
-                        {(Object.keys(ACCENT_COLORS) as AccentColor[]).map((color) => (
-                          <button
-                            key={color}
-                            onClick={() => setSelectedAccentColor(color)}
-                            className={`w-5 h-5 rounded-full transition-all ${
-                              selectedAccentColor === color 
-                                ? "ring-2 ring-offset-1 ring-gray-400 scale-110" 
-                                : "hover:scale-110"
-                            }`}
-                            style={{ backgroundColor: ACCENT_COLORS[color].primary }}
-                            title={ACCENT_COLORS[color].name}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  {TEMPLATES.map((template) => {
-                    const isSelected = selectedTemplate === template.slug;
-                    return (
-                      <button
-                        key={template.slug}
-                        onClick={() => setSelectedTemplate(template.slug)}
-                        className={`flex-1 px-3 py-2 text-xs font-medium rounded-md transition-all ${
-                          isSelected
-                            ? "bg-blue-600 text-white"
-                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                        }`}
-                      >
-                        {template.name}
-                      </button>
-                    );
-                  })}
-                </div>
+                <Label className="text-sm font-medium text-gray-700">Template: Classic ATS</Label>
               </div>
               
               <div className="bg-gray-50 border-b px-4 py-2 flex items-center justify-between">
@@ -637,7 +596,6 @@ export default function GeneratePage() {
                     <ResumeTemplate
                       resume={parsedAsTailored}
                       template={selectedTemplate}
-                      accentColor={selectedAccentColor}
                       designOptions={designOptions}
                     />
                   </PagedResumePreview>
@@ -926,7 +884,6 @@ export default function GeneratePage() {
                     <ResumeTemplate
                       resume={parsedAsTailored}
                       template={selectedTemplate}
-                      accentColor={selectedAccentColor}
                       designOptions={designOptions}
                     />
                   </PagedResumePreview>

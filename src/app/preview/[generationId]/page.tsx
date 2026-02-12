@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { ResumeTemplate, ACCENT_COLORS, AccentColor } from "@/components/resume-templates";
+import { ResumeTemplate } from "@/components/resume-templates";
 import { PagedResumePreview } from "@/components/PagedResumePreview";
 import MatchInsights from "@/components/generator/MatchInsights";
 import { RequireAuth } from "@/components/auth/RequireAuth";
@@ -18,12 +18,11 @@ import {
   TailoredResume, 
   ParsedResume, 
   TemplateSlug, 
-  TEMPLATES,
   DesignOptions,
   DEFAULT_DESIGN_OPTIONS,
   FONT_FAMILIES
 } from "@/types/resume";
-import { ArrowLeft, Download, FileText, ChevronDown, ArrowRight, Eye, RotateCcw, Loader2, Pencil, FileSignature, UserCircle } from "lucide-react";
+import { ArrowLeft, Download, FileText, ArrowRight, Eye, RotateCcw, Loader2, Pencil, FileSignature, UserCircle } from "lucide-react";
 import { buildCoverLetterFields, CoverLetterFields, CoverLetterStyles, generateCoverLetterHTML } from "@/lib/cover-letter";
 
 export default function PreviewPage() {
@@ -32,11 +31,9 @@ export default function PreviewPage() {
   
   const [tailoredResume, setTailoredResume] = useState<TailoredResume | null>(null);
   const [originalResume, setOriginalResume] = useState<ParsedResume | null>(null);
-  const [selectedTemplate, setSelectedTemplate] = useState<TemplateSlug>("classic-ats");
-  const [selectedAccentColor, setSelectedAccentColor] = useState<AccentColor>("purple");
+  const [selectedTemplate] = useState<TemplateSlug>("classic-ats");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showTemplateDropdown, setShowTemplateDropdown] = useState(false);
   const [activeTab, setActiveTab] = useState<"tailored" | "compare" | "insights" | "cover-letter">("compare");
   const [addedKeywords, setAddedKeywords] = useState<string[]>([]);
   const [designOptions, setDesignOptions] = useState<DesignOptions>(DEFAULT_DESIGN_OPTIONS);
@@ -57,10 +54,16 @@ export default function PreviewPage() {
     // Get the resumes from sessionStorage (set during generation)
     const storedResume = sessionStorage.getItem(`resume-${generationId}`);
     const storedOriginal = sessionStorage.getItem(`original-${generationId}`);
-    const storedTemplate = sessionStorage.getItem(`template-${generationId}`);
-    const storedAccent = sessionStorage.getItem(`accent-${generationId}`);
     const storedAdded = sessionStorage.getItem(`added-${generationId}`);
     const storedDesignOptions = sessionStorage.getItem(`designOptions-${generationId}`);
+    let storedJobDescription = sessionStorage.getItem(`jobDescription-${generationId}`);
+    if (!storedJobDescription && typeof window !== "undefined") {
+      const fallbackJob = localStorage.getItem(`jobDescription-${generationId}`);
+      if (fallbackJob) {
+        sessionStorage.setItem(`jobDescription-${generationId}`, fallbackJob);
+        storedJobDescription = fallbackJob;
+      }
+    }
     
     if (storedResume) {
       try {
@@ -68,17 +71,17 @@ export default function PreviewPage() {
         if (storedOriginal) {
           setOriginalResume(JSON.parse(storedOriginal));
         }
-        if (storedTemplate) {
-          setSelectedTemplate(storedTemplate as TemplateSlug);
-        }
-        if (storedAccent) {
-          setSelectedAccentColor(storedAccent as AccentColor);
-        }
         if (storedAdded) {
           setAddedKeywords(JSON.parse(storedAdded));
         }
         if (storedDesignOptions) {
           setDesignOptions(JSON.parse(storedDesignOptions));
+        }
+        if (!storedJobDescription && typeof window !== "undefined") {
+          const fallbackJob = localStorage.getItem(`jobDescription-${generationId}`);
+          if (fallbackJob) {
+            sessionStorage.setItem(`jobDescription-${generationId}`, fallbackJob);
+          }
         }
         const storedCoverLetter = sessionStorage.getItem(`coverLetter-${generationId}`);
         if (storedCoverLetter) {
@@ -104,8 +107,9 @@ export default function PreviewPage() {
   const [isExporting, setIsExporting] = useState(false);
 
   const handleGenerateCoverLetter = async () => {
-    if (!tailoredResume) {
-      setError("Resume content not found. Please refresh and try again.");
+    const resumeForCoverLetter = tailoredResume || originalResume || null;
+    if (!resumeForCoverLetter) {
+      setError("Please generate a tailored resume first.");
       return;
     }
     const storedJobDescription = sessionStorage.getItem(`jobDescription-${generationId}`);
@@ -122,7 +126,8 @@ export default function PreviewPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          tailoredResume,
+          tailoredResume: tailoredResume || undefined,
+          resume: resumeForCoverLetter,
           jobDescription: storedJobDescription,
         }),
       });
@@ -135,14 +140,12 @@ export default function PreviewPage() {
       const data = await response.json();
       setCoverLetter(data.coverLetter);
       sessionStorage.setItem(`coverLetter-${generationId}`, data.coverLetter);
-      if (tailoredResume) {
-        const fields = buildCoverLetterFields({
-          resume: tailoredResume,
-          coverLetter: data.coverLetter,
-        });
-        setCoverLetterFields(fields);
-        sessionStorage.setItem(`coverLetterFields-${generationId}`, JSON.stringify(fields));
-      }
+      const fields = buildCoverLetterFields({
+        resume: resumeForCoverLetter,
+        coverLetter: data.coverLetter,
+      });
+      setCoverLetterFields(fields);
+      sessionStorage.setItem(`coverLetterFields-${generationId}`, JSON.stringify(fields));
       sessionStorage.setItem(`coverLetterStyles-${generationId}`, JSON.stringify(coverLetterStyles));
       setActiveTab("cover-letter");
     } catch (err) {
@@ -234,7 +237,6 @@ export default function PreviewPage() {
           resume: tailoredResume,
           designOptions,
           template: selectedTemplate,
-          accentColor: selectedAccentColor,
           fileName,
         }),
       });
@@ -267,6 +269,70 @@ export default function PreviewPage() {
   const handleAddKeyword = (keyword: string) => {
     if (!tailoredResume || addedKeywords.includes(keyword)) return;
     
+    const languageSet = new Set([
+      "javascript",
+      "typescript",
+      "python",
+      "java",
+      "c",
+      "c++",
+      "c#",
+      "go",
+      "golang",
+      "ruby",
+      "php",
+      "swift",
+      "kotlin",
+      "rust",
+      "scala",
+      "sql",
+      "bash",
+      "shell",
+    ]);
+    const frameworkSet = new Set([
+      "react",
+      "next.js",
+      "nextjs",
+      "angular",
+      "vue",
+      "svelte",
+      "tailwind",
+      "tailwind css",
+      "fastapi",
+      "django",
+      "flask",
+      "spring",
+      "node.js",
+      "nodejs",
+      "express",
+      "nestjs",
+    ]);
+    const toolSet = new Set([
+      "git",
+      "github",
+      "git workflow",
+      "docker",
+      "firebase",
+      "firestore",
+      "firebase admin sdk",
+      "google recaptcha",
+      "ci/cd",
+      "serverless",
+      "serverless api routes",
+      "restful apis",
+      "api integrations",
+      "postgresql",
+      "nosql",
+    ]);
+    const key = keyword.trim().toLowerCase();
+    const bucket = languageSet.has(key)
+      ? "languages"
+      : frameworkSet.has(key)
+      ? "frameworks"
+      : toolSet.has(key)
+      ? "tools"
+      : "other";
+
     // Add to added keywords list
     const newAddedKeywords = [...addedKeywords, keyword];
     setAddedKeywords(newAddedKeywords);
@@ -276,7 +342,7 @@ export default function PreviewPage() {
       ...tailoredResume,
       skills: {
         ...tailoredResume.skills,
-        other: [...(tailoredResume.skills?.other || []), keyword],
+        [bucket]: [...((tailoredResume.skills as Record<string, string[]> | undefined)?.[bucket] || []), keyword],
       },
       // Move keyword from missing to matched
       matchedKeywords: [...(tailoredResume.matchedKeywords || []), keyword],
@@ -299,11 +365,15 @@ export default function PreviewPage() {
     setAddedKeywords(newAddedKeywords);
     
     // Create the updated resume
+    const removeFrom = (arr?: string[]) => (arr || []).filter(k => k !== keyword);
     const updated = {
       ...tailoredResume,
       skills: {
         ...tailoredResume.skills,
-        other: (tailoredResume.skills?.other || []).filter(k => k !== keyword),
+        languages: removeFrom(tailoredResume.skills?.languages),
+        frameworks: removeFrom(tailoredResume.skills?.frameworks),
+        tools: removeFrom(tailoredResume.skills?.tools),
+        other: removeFrom(tailoredResume.skills?.other),
       },
       // Move keyword back from matched to missing
       matchedKeywords: (tailoredResume.matchedKeywords || []).filter(k => k !== keyword),
@@ -422,59 +492,7 @@ export default function PreviewPage() {
             </Link>
           </div>
           <div className="flex items-center gap-3">
-            {/* Template Selector */}
-            <div className="relative">
-              <Button
-                variant="outline"
-                onClick={() => setShowTemplateDropdown(!showTemplateDropdown)}
-                className="flex items-center gap-2"
-              >
-                {TEMPLATES.find(t => t.slug === selectedTemplate)?.name || "Template"}
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-              {showTemplateDropdown && (
-                <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border py-1 z-50">
-                  {TEMPLATES.map((template) => (
-                    <button
-                      key={template.slug}
-                      onClick={() => {
-                        setSelectedTemplate(template.slug);
-                        sessionStorage.setItem(`template-${generationId}`, template.slug);
-                        setShowTemplateDropdown(false);
-                      }}
-                      className={`w-full text-left px-4 py-2 hover:bg-gray-100 ${
-                        selectedTemplate === template.slug ? "bg-blue-50 text-blue-600" : ""
-                      }`}
-                    >
-                      {template.name}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-            
-            {/* Accent Color Picker - Only for Accent template */}
-            {selectedTemplate === "tech-focused" && (
-              <div className="flex items-center gap-2 border-l pl-3">
-                {(Object.keys(ACCENT_COLORS) as AccentColor[]).map((color) => (
-                  <button
-                    key={color}
-                    onClick={() => {
-                      setSelectedAccentColor(color);
-                      sessionStorage.setItem(`accent-${generationId}`, color);
-                    }}
-                    className={`w-6 h-6 rounded-full transition-all ${
-                      selectedAccentColor === color 
-                        ? "ring-2 ring-offset-1 ring-gray-400 scale-110" 
-                        : "hover:scale-105"
-                    }`}
-                    style={{ backgroundColor: ACCENT_COLORS[color].primary }}
-                    title={ACCENT_COLORS[color].name}
-                  />
-                ))}
-              </div>
-            )}
-            
+            <div className="text-sm text-gray-600">Template: Classic ATS</div>
             <Button onClick={handleExportPDF} disabled={isExporting}>
               {isExporting ? (
                 <>
@@ -567,7 +585,6 @@ export default function PreviewPage() {
               <ResumeTemplate
                 resume={tailoredResume}
                 template={selectedTemplate}
-                accentColor={selectedAccentColor}
                 designOptions={designOptions}
               />
             </PagedResumePreview>
@@ -595,7 +612,6 @@ export default function PreviewPage() {
                       <ResumeTemplate
                         resume={originalAsTailored}
                         template={selectedTemplate}
-                        accentColor={selectedAccentColor}
                         designOptions={designOptions}
                       />
                     </PagedResumePreview>
@@ -629,7 +645,6 @@ export default function PreviewPage() {
                     <ResumeTemplate
                       resume={tailoredResume}
                       template={selectedTemplate}
-                      accentColor={selectedAccentColor}
                       designOptions={designOptions}
                       highlightKeywords={tailoredResume.matchedKeywords || []}
                     />
@@ -774,7 +789,11 @@ export default function PreviewPage() {
                       onClick={handleGenerateCoverLetter}
                       disabled={isCoverLetterGenerating}
                     >
-                      {isCoverLetterGenerating ? "Generating..." : "Regenerate"}
+                      {isCoverLetterGenerating
+                        ? "Generating..."
+                        : coverLetterFields
+                        ? "Regenerate"
+                        : "Generate"}
                     </Button>
                     <Button
                       onClick={handleExportCoverLetter}

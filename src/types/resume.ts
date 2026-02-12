@@ -1,14 +1,28 @@
 import { z } from "zod";
 
+const isUrlOrDomain = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    try {
+      new URL(trimmed);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  return /^[^\s]+\.[^\s]+/.test(trimmed);
+};
+
 // Contact Information Schema
 export const ContactSchema = z.object({
   name: z.string(),
   email: z.string().email().optional(),
   phone: z.string().optional(),
   location: z.string().optional(),
-  linkedin: z.string().url().optional(),
-  github: z.string().url().optional(),
-  website: z.string().url().optional(),
+  linkedin: z.string().refine(isUrlOrDomain, "Invalid URL").optional(),
+  github: z.string().refine(isUrlOrDomain, "Invalid URL").optional(),
+  website: z.string().refine(isUrlOrDomain, "Invalid URL").optional(),
 });
 
 // Work Experience Schema
@@ -37,7 +51,7 @@ export const EducationSchema = z.object({
 export const ProjectSchema = z.object({
   name: z.string(),
   description: z.string().optional(),
-  url: z.string().url().optional(),
+  url: z.string().refine(isUrlOrDomain, "Invalid URL").optional(),
   technologies: z.array(z.string()).optional(),
   highlights: z.array(z.string()).optional(),
 });
@@ -59,6 +73,9 @@ export const CustomSectionSchema = z.object({
   bullets: z.array(z.string()).optional(), // For bullet type
 });
 
+// Coursework Schema
+export const CourseworkSchema = z.array(z.string());
+
 // Skills Schema
 export const SkillsSchema = z.object({
   technical: z.array(z.string()).optional(),
@@ -78,6 +95,8 @@ export const ParsedResumeSchema = z.object({
   skills: SkillsSchema.optional(),
   projects: z.array(ProjectSchema).optional(),
   certifications: z.array(CertificationSchema).optional(),
+  coursework: CourseworkSchema.optional(),
+  leadership: z.array(ExperienceSchema).optional(),
 });
 
 // Tailored Resume JSON Schema (output from LLM)
@@ -89,6 +108,8 @@ export const TailoredResumeSchema = z.object({
   skills: SkillsSchema, // Prioritized skills matching JD
   projects: z.array(ProjectSchema).optional(),
   certifications: z.array(CertificationSchema).optional(),
+  coursework: CourseworkSchema.optional(),
+  leadership: z.array(ExperienceSchema).optional(),
   customSections: z.array(CustomSectionSchema).optional(), // User-added custom sections
   matchedKeywords: z.array(z.string()).optional(), // Keywords from JD found in resume
   missingKeywords: z.array(z.string()).optional(), // Keywords from JD not in resume
@@ -107,9 +128,7 @@ export const ExtractedJobDescriptionSchema = z.object({
 
 // Template Types
 export const TemplateSlugSchema = z.enum([
-  "modern-professional",
   "classic-ats",
-  "tech-focused",
 ]);
 
 export type Contact = z.infer<typeof ContactSchema>;
@@ -118,6 +137,7 @@ export type Education = z.infer<typeof EducationSchema>;
 export type Project = z.infer<typeof ProjectSchema>;
 export type Certification = z.infer<typeof CertificationSchema>;
 export type CustomSection = z.infer<typeof CustomSectionSchema>;
+export type Coursework = z.infer<typeof CourseworkSchema>;
 export type Skills = z.infer<typeof SkillsSchema>;
 export type ParsedResume = z.infer<typeof ParsedResumeSchema>;
 export type TailoredResume = z.infer<typeof TailoredResumeSchema>;
@@ -127,7 +147,7 @@ export type TemplateSlug = z.infer<typeof TemplateSlugSchema>;
 // Design Options for resume customization
 export type HeaderAlignment = "left" | "center" | "right";
 export type MarginSize = "small" | "medium" | "large";
-export type FontFamily = "sans" | "serif" | "mono" | "georgia" | "arial" | "times";
+export type FontFamily = "sans" | "serif" | "mono" | "georgia" | "arial" | "times" | "roboto" | "helvetica";
 export type HeadingColor = "blue" | "black" | "gray" | "navy" | "green";
 
 export const HEADING_COLORS: { value: HeadingColor; label: string; hex: string }[] = [
@@ -159,6 +179,14 @@ export interface DesignOptions {
     summaryText?: number;
     skillsTitle?: number;
     skillsText?: number;
+    contactInfo?: number;
+    contactName?: number;
+    contactEmail?: number;
+    contactPhone?: number;
+    contactLocation?: number;
+    contactLinkedin?: number;
+    contactGithub?: number;
+    contactWebsite?: number;
     projectSectionTitle?: number;  // "PROJECTS" section heading
     projectTitle?: number;          // Individual project names
     projectDescription?: number;
@@ -175,6 +203,14 @@ export interface DesignOptions {
     summaryText?: FontFamily;
     skillsTitle?: FontFamily;
     skillsText?: FontFamily;
+    contactInfo?: FontFamily;
+    contactName?: FontFamily;
+    contactEmail?: FontFamily;
+    contactPhone?: FontFamily;
+    contactLocation?: FontFamily;
+    contactLinkedin?: FontFamily;
+    contactGithub?: FontFamily;
+    contactWebsite?: FontFamily;
     projectSectionTitle?: FontFamily;  // "PROJECTS" section heading
     projectTitle?: FontFamily;
     projectDescription?: FontFamily;
@@ -207,12 +243,28 @@ export interface DesignOptions {
 export const DEFAULT_DESIGN_OPTIONS: DesignOptions = {
   headerAlignment: "center",
   marginSize: "medium",
-  fontFamily: "serif",
-  fontSize: 14,
-  lineHeight: 1.4,
+  fontFamily: "times",
+  fontSize: 12.5,
+  lineHeight: 1.2,
   headingColor: "black",
-  sectionOrder: ["summary", "skills", "projects", "experience", "education", "certifications"],
-  sectionFontSizes: undefined, // Uses defaults based on fontSize
+  sectionOrder: ["summary", "skills", "coursework", "experience", "projects", "leadership", "certifications", "education"],
+  sectionFontSizes: {
+    contactName: 28,
+    contactInfo: 15.5,
+    summaryTitle: 18.5,
+    summaryText: 12.5,
+    skillsTitle: 18.5,
+    skillsText: 12.5,
+    experienceTitle: 18.5,
+    experienceRole: 15.5,
+    experienceCompany: 16.5,
+    experienceText: 12.5,
+    projectSectionTitle: 18.5,
+    projectTitle: 16.5,
+    projectDescription: 12.5,
+    educationTitle: 18.5,
+    educationText: 13.5,
+  },
   sectionFontFamilies: undefined, // Uses defaults based on fontFamily
   educationFontStyles: undefined,
   skillCategoryNames: undefined, // Uses defaults
@@ -225,6 +277,8 @@ export const FONT_FAMILIES: { value: FontFamily; label: string; css: string }[] 
   { value: "georgia", label: "Georgia", css: "Georgia, serif" },
   { value: "times", label: "Times New Roman", css: "Times New Roman, Times, serif" },
   { value: "arial", label: "Arial", css: "Arial, Helvetica, sans-serif" },
+  { value: "helvetica", label: "Helvetica", css: "Helvetica, Arial, sans-serif" },
+  { value: "roboto", label: "Roboto", css: "Roboto, Arial, sans-serif" },
   { value: "mono", label: "Monospace", css: "ui-monospace, monospace" },
 ];
 
@@ -244,21 +298,9 @@ export interface TemplateInfo {
 
 export const TEMPLATES: TemplateInfo[] = [
   {
-    slug: "modern-professional",
-    name: "Modern Professional",
-    description: "Clean, contemporary design with subtle accent colors. Perfect for corporate roles.",
-    previewImage: "/templates/modern-professional.png",
-  },
-  {
     slug: "classic-ats",
     name: "Classic ATS",
     description: "Traditional format optimized for applicant tracking systems. Maximum compatibility.",
     previewImage: "/templates/classic-ats.png",
-  },
-  {
-    slug: "tech-focused",
-    name: "Accent",
-    description: "Elegant design with customizable accent colors. Clean and professional.",
-    previewImage: "/templates/tech-focused.png",
   },
 ];

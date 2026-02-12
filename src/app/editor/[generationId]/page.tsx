@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ResumeTemplate, AccentColor } from "@/components/resume-templates";
+import { ResumeTemplate } from "@/components/resume-templates";
 import { PagedResumePreview } from "@/components/PagedResumePreview";
 import { RequireAuth } from "@/components/auth/RequireAuth";
 import { 
@@ -46,9 +46,11 @@ import {
   Type,
   ArrowUp,
   ArrowDown,
+  BookOpen,
   FileText,
   List,
-  UserCircle
+  UserCircle,
+  Users
 } from "lucide-react";
 
 // Font family select component
@@ -82,7 +84,7 @@ function FontControl({
   family, 
   onFamilyChange,
   min = 8,
-  max = 24
+  max = 30
 }: { 
   label: string; 
   size: number; 
@@ -93,10 +95,10 @@ function FontControl({
   max?: number;
 }) {
   return (
-    <div className="flex items-center gap-2 p-1 bg-gray-50 rounded border">
+    <div className="flex flex-wrap items-center gap-2 p-1 bg-gray-50 rounded border">
       <Type className="h-3 w-3 text-gray-400" />
-      <span className="text-xs text-gray-600 min-w-16">{label}</span>
-      <div className="flex items-center gap-1">
+      <span className="text-xs text-gray-600 min-w-12">{label}</span>
+      <div className="flex items-center gap-1 flex-shrink-0">
         <Button variant="outline" size="sm" className="h-5 w-5 p-0"
           onClick={() => onSizeChange(Math.max(min, size - 1))}
           disabled={size <= min}
@@ -113,14 +115,16 @@ function FontControl({
 }
 
 // Section types for ordering
-type SectionKey = "summary" | "skills" | "projects" | "experience" | "education" | "certifications";
+type SectionKey = "summary" | "education" | "coursework" | "experience" | "projects" | "skills" | "leadership" | "certifications";
 
 const SECTION_ICONS: Record<SectionKey, React.ElementType> = {
   summary: Briefcase,
-  skills: Wrench,
-  projects: FolderOpen,
-  experience: Briefcase,
   education: GraduationCap,
+  coursework: BookOpen,
+  experience: Briefcase,
+  projects: FolderOpen,
+  skills: Wrench,
+  leadership: Users,
   certifications: Award
 };
 
@@ -173,9 +177,16 @@ function CollapsibleSection({
           </button>
         </div>
         
-        <button
-          type="button"
+        <div
+          role="button"
+          tabIndex={0}
           onClick={() => setIsOpen(!isOpen)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setIsOpen(!isOpen);
+            }
+          }}
           className="flex-1 p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
         >
           <div className="flex items-center gap-2">
@@ -192,7 +203,7 @@ function CollapsibleSection({
               {action}
             </div>
           )}
-        </button>
+        </div>
       </div>
       {isOpen && (
         <div className="px-4 pb-4 pt-0">
@@ -260,13 +271,12 @@ export default function EditorPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateSlug>("classic-ats");
-  const [selectedAccentColor, setSelectedAccentColor] = useState<AccentColor>("purple");
   const [designOptions, setDesignOptions] = useState<DesignOptions>(DEFAULT_DESIGN_OPTIONS);
+  const [projectTechInputs, setProjectTechInputs] = useState<Record<number, string>>({});
 
   useEffect(() => {
     const storedResume = sessionStorage.getItem(`resume-${generationId}`);
     const storedTemplate = sessionStorage.getItem(`template-${generationId}`);
-    const storedAccent = sessionStorage.getItem(`accent-${generationId}`);
     const storedDesignOptions = sessionStorage.getItem(`designOptions-${generationId}`);
     
     if (storedResume) {
@@ -279,9 +289,6 @@ export default function EditorPage() {
     if (storedTemplate) {
       setSelectedTemplate(storedTemplate as TemplateSlug);
     }
-    if (storedAccent) {
-      setSelectedAccentColor(storedAccent as AccentColor);
-    }
     if (storedDesignOptions) {
       try {
         setDesignOptions(JSON.parse(storedDesignOptions));
@@ -293,7 +300,15 @@ export default function EditorPage() {
   }, [generationId]);
 
   // Get section order with defaults
-  const sectionOrder = designOptions.sectionOrder || DEFAULT_DESIGN_OPTIONS.sectionOrder || ["summary", "skills", "projects", "experience", "education", "certifications"];
+  const defaultSectionOrder = DEFAULT_DESIGN_OPTIONS.sectionOrder || ["summary", "skills", "coursework", "experience", "projects", "leadership", "certifications", "education"];
+  const legacySectionOrder = ["summary", "education", "coursework", "experience", "projects", "skills", "leadership", "certifications"];
+  const hasLegacyOrder =
+    designOptions.sectionOrder &&
+    JSON.stringify(designOptions.sectionOrder) === JSON.stringify(legacySectionOrder);
+  const baseOrder = hasLegacyOrder ? defaultSectionOrder : designOptions.sectionOrder;
+  const sectionOrder = baseOrder && baseOrder.length > 0
+    ? [...baseOrder, ...defaultSectionOrder.filter(s => !baseOrder.includes(s))]
+    : defaultSectionOrder;
 
   // Move section up/down
   const moveSection = useCallback((sectionKey: SectionKey, direction: 'up' | 'down') => {
@@ -400,6 +415,65 @@ export default function EditorPage() {
     setHasChanges(true);
   };
 
+  const updateLeadership = (index: number, updates: Partial<Experience>) => {
+    if (!resume) return;
+    const current = resume.leadership || [];
+    const next = [...current];
+    next[index] = { ...next[index], ...updates };
+    setResume({ ...resume, leadership: next });
+    setHasChanges(true);
+  };
+
+  const updateLeadershipHighlight = (expIndex: number, highlightIndex: number, value: string) => {
+    if (!resume) return;
+    const current = resume.leadership || [];
+    const next = [...current];
+    const newHighlights = [...(next[expIndex]?.highlights || [])];
+    newHighlights[highlightIndex] = value;
+    next[expIndex] = { ...next[expIndex], highlights: newHighlights };
+    setResume({ ...resume, leadership: next });
+    setHasChanges(true);
+  };
+
+  const addLeadershipHighlight = (expIndex: number) => {
+    if (!resume) return;
+    const current = resume.leadership || [];
+    const next = [...current];
+    const newHighlights = [...(next[expIndex]?.highlights || []), ""];
+    next[expIndex] = { ...next[expIndex], highlights: newHighlights };
+    setResume({ ...resume, leadership: next });
+    setHasChanges(true);
+  };
+
+  const removeLeadershipHighlight = (expIndex: number, highlightIndex: number) => {
+    if (!resume) return;
+    const current = resume.leadership || [];
+    const next = [...current];
+    const newHighlights = [...(next[expIndex]?.highlights || [])];
+    newHighlights.splice(highlightIndex, 1);
+    next[expIndex] = { ...next[expIndex], highlights: newHighlights };
+    setResume({ ...resume, leadership: next });
+    setHasChanges(true);
+  };
+
+  const addLeadership = () => {
+    if (!resume) return;
+    const next = [
+      ...(resume.leadership || []),
+      { company: "", title: "", startDate: "", endDate: "", highlights: [""] },
+    ];
+    setResume({ ...resume, leadership: next });
+    setHasChanges(true);
+  };
+
+  const removeLeadership = (index: number) => {
+    if (!resume) return;
+    const next = [...(resume.leadership || [])];
+    next.splice(index, 1);
+    setResume({ ...resume, leadership: next });
+    setHasChanges(true);
+  };
+
   const updateEducation = (index: number, updates: Partial<Education>) => {
     if (!resume) return;
     const newEducation = [...resume.education];
@@ -475,6 +549,17 @@ export default function EditorPage() {
     // Swap items
     [items[index], items[newIdx]] = [items[newIdx], items[index]];
     setResume({ ...resume, experience: items });
+    setHasChanges(true);
+  }, [resume]);
+
+  const moveLeadership = useCallback((index: number, direction: 'up' | 'down') => {
+    if (!resume) return;
+    const current = resume.leadership || [];
+    const newOrder = [...current];
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= newOrder.length) return;
+    [newOrder[index], newOrder[newIndex]] = [newOrder[newIndex], newOrder[index]];
+    setResume({ ...resume, leadership: newOrder });
     setHasChanges(true);
   }, [resume]);
 
@@ -666,7 +751,7 @@ export default function EditorPage() {
         return (
           <CollapsibleSection 
             key={sectionKey}
-            title="Professional Summary" 
+            title="Summary" 
             icon={Icon}
             onMoveUp={() => moveSection(sectionKey, 'up')}
             onMoveDown={() => moveSection(sectionKey, 'down')}
@@ -676,7 +761,7 @@ export default function EditorPage() {
             {/* Font controls for summary */}
             <div className="mb-3 space-y-2 p-2 bg-blue-50 rounded border border-blue-100">
               <div className="text-xs font-medium text-blue-700 mb-1">Typography</div>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <FontControl 
                   label="Heading"
                   size={getFontSize('summaryTitle', 4)}
@@ -704,12 +789,10 @@ export default function EditorPage() {
         );
 
       case "skills":
-        const skillCategories = ['technical', 'frameworks', 'tools', 'languages', 'soft', 'other'] as const;
-        
         return (
           <CollapsibleSection 
             key={sectionKey}
-            title="Skills" 
+            title="Technical Skills" 
             icon={Icon}
             defaultOpen={false}
             onMoveUp={() => moveSection(sectionKey, 'up')}
@@ -718,9 +801,9 @@ export default function EditorPage() {
             canMoveDown={canMoveDown}
           >
             {/* Section heading font control */}
-            <div className="mb-3 p-2 bg-blue-50 rounded border border-blue-100">
+            <div className="mb-3 space-y-2 p-2 bg-blue-50 rounded border border-blue-100">
               <div className="text-xs font-medium text-blue-700 mb-1">Typography</div>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <FontControl 
                   label="Section"
                   size={getFontSize('skillsTitle', 4)}
@@ -738,37 +821,45 @@ export default function EditorPage() {
               </div>
             </div>
             
-            <p className="text-sm text-gray-500 mb-3">Enter your technical skills separated by commas. Soft skills are woven into your experience bullets.</p>
-            <Textarea
-              value={[
-                ...(resume.skills?.technical || []),
-                ...(resume.skills?.frameworks || []),
-                ...(resume.skills?.tools || []),
-                ...(resume.skills?.languages || []),
-                ...(resume.skills?.other || []),
-              ].join(", ")}
-              onChange={(e) => {
-                const skills = e.target.value.split(",").map(s => s.trim()).filter(Boolean);
-                setResume(prev => {
-                  if (!prev) return prev;
-                  return {
-                    ...prev,
-                    skills: {
-                      ...prev.skills,
-                      technical: skills,
-                      frameworks: [],
-                      tools: [],
-                      languages: [],
-                      soft: [],
-                      other: [],
-                    }
-                  };
-                });
-                setHasChanges(true);
-              }}
-              placeholder="React, TypeScript, Node.js, Python, AWS, Docker..."
-              className="min-h-[80px]"
-            />
+            <p className="text-sm text-gray-500 mb-3">Comma-separated lists that map to the Classic ATS layout.</p>
+            <div className="space-y-3">
+              <div>
+                <Label className="text-sm font-medium">Languages</Label>
+                <Input
+                  value={(resume.skills?.languages || []).join(", ")}
+                  onChange={(e) => {
+                    const values = e.target.value.split(",").map(s => s.trim()).filter(Boolean);
+                    setResume(prev => prev ? { ...prev, skills: { ...prev.skills, languages: values } } : prev);
+                    setHasChanges(true);
+                  }}
+                  placeholder="Python, Java, C, JavaScript"
+                />
+              </div>
+              <div>
+                <Label className="text-sm font-medium">Frameworks</Label>
+                <Input
+                  value={(resume.skills?.frameworks || []).join(", ")}
+                  onChange={(e) => {
+                    const values = e.target.value.split(",").map(s => s.trim()).filter(Boolean);
+                    setResume(prev => prev ? { ...prev, skills: { ...prev.skills, frameworks: values } } : prev);
+                    setHasChanges(true);
+                  }}
+                  placeholder="React, Next.js, Tailwind"
+                />
+              </div>
+              <div>
+                <Label className="text-sm font-medium">Tools</Label>
+                <Input
+                  value={(resume.skills?.tools || []).join(", ")}
+                  onChange={(e) => {
+                    const values = e.target.value.split(",").map(s => s.trim()).filter(Boolean);
+                    setResume(prev => prev ? { ...prev, skills: { ...prev.skills, tools: values } } : prev);
+                    setHasChanges(true);
+                  }}
+                  placeholder="VS Code, GitHub, Docker"
+                />
+              </div>
+            </div>
           </CollapsibleSection>
         );
 
@@ -793,7 +884,7 @@ export default function EditorPage() {
             {/* Section heading font control */}
             <div className="mb-3 p-2 bg-blue-50 rounded border border-blue-100">
               <div className="text-xs font-medium text-blue-700 mb-1">Typography</div>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
                 <FontControl 
                   label="Section"
                   size={getFontSize('projectSectionTitle', 4)}
@@ -877,23 +968,85 @@ export default function EditorPage() {
                     <div>
                       <Label className="text-sm">Technologies (comma-separated)</Label>
                       <Input
-                        value={proj.technologies?.join(", ") || ""}
-                        onChange={(e) => updateProject(projIndex, { 
-                          technologies: e.target.value.split(",").map(s => s.trim()).filter(Boolean) 
-                        })}
+                        value={projectTechInputs[projIndex] ?? proj.technologies?.join(", ") ?? ""}
+                        onChange={(e) => {
+                          const rawValue = e.target.value;
+                          setProjectTechInputs((prev) => ({ ...prev, [projIndex]: rawValue }));
+                          const parsed = rawValue
+                            .split(",")
+                            .map((s) => s.trim())
+                            .filter(Boolean);
+                          updateProject(projIndex, { technologies: parsed });
+                        }}
+                        onBlur={() => {
+                          const rawValue = projectTechInputs[projIndex] ?? proj.technologies?.join(", ") ?? "";
+                          const parsed = rawValue
+                            .split(",")
+                            .map((s) => s.trim())
+                            .filter(Boolean);
+                          updateProject(projIndex, { technologies: parsed });
+                          setProjectTechInputs((prev) => ({ ...prev, [projIndex]: parsed.join(", ") }));
+                        }}
                         className="mt-1"
                         placeholder="React, Node.js, PostgreSQL..."
                       />
                     </div>
                     <div>
-                      <Label className="text-sm">Description</Label>
-                      <Textarea
-                        value={proj.description || ""}
-                        onChange={(e) => updateProject(projIndex, { description: e.target.value })}
-                        className="mt-1"
-                        rows={2}
-                        placeholder="Brief description (will appear after technologies)"
-                      />
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm">Project Bullets</Label>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            updateProject(projIndex, {
+                              highlights: [...(proj.highlights || []), ""],
+                            })
+                          }
+                        >
+                          <Plus className="h-4 w-4 mr-1" />
+                          Add Bullet
+                        </Button>
+                      </div>
+                      <div className="mt-2 space-y-2">
+                        {(proj.highlights && proj.highlights.length > 0
+                          ? proj.highlights
+                          : proj.description
+                          ? [proj.description]
+                          : [""]).map((bullet, bulletIndex) => (
+                          <div key={bulletIndex} className="flex items-start gap-2">
+                            <Textarea
+                              value={bullet}
+                              onChange={(e) => {
+                                const next = [...(proj.highlights || [])];
+                                if (next.length === 0 && proj.description) {
+                                  next.push(proj.description);
+                                }
+                                if (next.length === 0) next.push("");
+                                next[bulletIndex] = e.target.value;
+                                updateProject(projIndex, { highlights: next });
+                              }}
+                              className="flex-1 text-sm"
+                              rows={2}
+                              placeholder="Describe an achievement or feature..."
+                            />
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                const next = [...(proj.highlights || [])];
+                                if (next.length === 0 && proj.description) {
+                                  next.push(proj.description);
+                                }
+                                next.splice(bulletIndex, 1);
+                                updateProject(projIndex, { highlights: next });
+                              }}
+                              className="text-gray-400 hover:text-red-600 mt-1 h-7 w-7 p-0"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -926,7 +1079,7 @@ export default function EditorPage() {
             {/* Section font controls */}
             <div className="mb-3 p-2 bg-blue-50 rounded border border-blue-100">
               <div className="text-xs font-medium text-blue-700 mb-1">Typography</div>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <FontControl 
                   label="Heading"
                   size={getFontSize('experienceTitle', 4)}
@@ -1210,6 +1363,166 @@ export default function EditorPage() {
                         className="mt-1"
                         placeholder="e.g., May 2020"
                       />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CollapsibleSection>
+        );
+
+      case "coursework":
+        return (
+          <CollapsibleSection
+            key={sectionKey}
+            title="Relevant Coursework"
+            icon={Icon}
+            defaultOpen={false}
+            onMoveUp={() => moveSection(sectionKey, "up")}
+            onMoveDown={() => moveSection(sectionKey, "down")}
+            canMoveUp={canMoveUp}
+            canMoveDown={canMoveDown}
+          >
+            <p className="text-sm text-gray-500 mb-3">One course per line. These will render in columns.</p>
+            <Textarea
+              value={(resume.coursework || []).join("\n")}
+              onChange={(e) => {
+                const items = e.target.value.split("\n").map(s => s.trim()).filter(Boolean);
+                setResume(prev => prev ? { ...prev, coursework: items } : prev);
+                setHasChanges(true);
+              }}
+              rows={6}
+              placeholder="Data Structures&#10;Algorithms Analysis&#10;Database Management"
+            />
+          </CollapsibleSection>
+        );
+
+      case "leadership":
+        return (
+          <CollapsibleSection 
+            key={sectionKey}
+            title="Leadership / Extracurricular" 
+            icon={Icon}
+            defaultOpen={false}
+            action={
+              <Button variant="outline" size="sm" onClick={addLeadership}>
+                <Plus className="h-4 w-4 mr-1" />
+                Add
+              </Button>
+            }
+            onMoveUp={() => moveSection(sectionKey, 'up')}
+            onMoveDown={() => moveSection(sectionKey, 'down')}
+            canMoveUp={canMoveUp}
+            canMoveDown={canMoveDown}
+          >
+            <div className="space-y-3">
+              {(resume.leadership || []).map((exp, expIndex) => (
+                <div key={expIndex} className="border rounded-lg p-3 bg-white">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="flex flex-col">
+                        <button
+                          type="button"
+                          onClick={() => moveLeadership(expIndex, 'up')}
+                          disabled={expIndex === 0}
+                          className="p-0.5 hover:bg-gray-200 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                          title="Move up"
+                        >
+                          <ArrowUp className="h-3 w-3 text-gray-500" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => moveLeadership(expIndex, 'down')}
+                          disabled={expIndex === (resume.leadership || []).length - 1}
+                          className="p-0.5 hover:bg-gray-200 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                          title="Move down"
+                        >
+                          <ArrowDown className="h-3 w-3 text-gray-500" />
+                        </button>
+                      </div>
+                      <span className="text-sm font-medium text-gray-500">Leadership {expIndex + 1}</span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeLeadership(expIndex)}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 w-7 p-0"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div>
+                      <Label className="text-sm">Organization</Label>
+                      <Input
+                        value={exp.company}
+                        onChange={(e) => updateLeadership(expIndex, { company: e.target.value })}
+                        placeholder="Fraternity / Club / Organization"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-sm">Role</Label>
+                      <Input
+                        value={exp.title}
+                        onChange={(e) => updateLeadership(expIndex, { title: e.target.value })}
+                        placeholder="President, Captain, Volunteer"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-sm">Start Date</Label>
+                      <Input
+                        value={exp.startDate}
+                        onChange={(e) => updateLeadership(expIndex, { startDate: e.target.value })}
+                        placeholder="Spring 2020"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-sm">End Date</Label>
+                      <Input
+                        value={exp.endDate || ""}
+                        onChange={(e) => updateLeadership(expIndex, { endDate: e.target.value || undefined })}
+                        placeholder="Present"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <Label className="text-sm">Location (optional)</Label>
+                      <Input
+                        value={exp.location || ""}
+                        onChange={(e) => updateLeadership(expIndex, { location: e.target.value })}
+                        placeholder="University Name"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <Label className="text-sm font-medium">Highlights</Label>
+                      <Button variant="outline" size="sm" onClick={() => addLeadershipHighlight(expIndex)}>
+                        <Plus className="h-4 w-4 mr-1" />
+                        Add Bullet
+                      </Button>
+                    </div>
+                    <div className="space-y-2">
+                      {(exp.highlights || []).map((highlight, hIndex) => (
+                        <div key={hIndex} className="flex items-start gap-2">
+                          <Textarea
+                            value={highlight}
+                            onChange={(e) => updateLeadershipHighlight(expIndex, hIndex, e.target.value)}
+                            rows={2}
+                            className="flex-1 text-sm"
+                            placeholder="Describe your impact..."
+                          />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeLeadershipHighlight(expIndex, hIndex)}
+                            className="text-gray-400 hover:text-red-600 mt-1 h-7 w-7 p-0"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -1536,6 +1849,25 @@ export default function EditorPage() {
               
               {/* Contact Information - not reorderable */}
               <SimpleCollapsibleSection title="Contact Information" icon={User}>
+                <div className="mb-3 space-y-2 p-2 bg-blue-50 rounded border border-blue-100">
+                  <div className="text-xs font-medium text-blue-700 mb-1">Typography</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <FontControl
+                      label="Name"
+                      size={getFontSize('contactName', 10)}
+                      onSizeChange={(v) => updateSectionFontSize('contactName', v)}
+                      family={getFontFamily('contactName')}
+                      onFamilyChange={(v) => updateSectionFontFamily('contactName', v)}
+                    />
+                    <FontControl
+                      label="Other fields"
+                      size={getFontSize('contactInfo', 1)}
+                      onSizeChange={(v) => updateSectionFontSize('contactInfo', v)}
+                      family={getFontFamily('contactInfo')}
+                      onFamilyChange={(v) => updateSectionFontFamily('contactInfo', v)}
+                    />
+                  </div>
+                </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label htmlFor="name" className="text-sm">Full Name</Label>
@@ -1628,7 +1960,6 @@ export default function EditorPage() {
                 <ResumeTemplate
                   resume={resume}
                   template={selectedTemplate}
-                  accentColor={selectedAccentColor}
                   designOptions={designOptions}
                 />
               </PagedResumePreview>

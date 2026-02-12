@@ -1,0 +1,6 @@
+ACHIEVEMENT ARCHITECTURE - Structure every bullet point using this formula:
+- **Result + Metric + Context** format:
+  * RESULT: What changed or improved because of your work
+  * METRIC: Specific numbers that prove the impact (%, $, time saved, users, etc.)
+  * CONTEXT: Brief explanation of how you achieved it and what you did
+- Example: "Reduced page load time by 40% (from 3.2s to 1.9s) by implementing lazy loading and optimizing database queries"

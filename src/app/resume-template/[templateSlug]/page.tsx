@@ -33,13 +33,6 @@ export async function generateMetadata({ params }: PageProps) {
 }
 
 const templateFeatures: Record<TemplateSlug, string[]> = {
-  "modern-professional": [
-    "Clean, contemporary design with subtle accent colors",
-    "Perfect for corporate and business roles",
-    "Optimized spacing for readability",
-    "Professional blue accent color scheme",
-    "Clear section hierarchy",
-  ],
   "classic-ats": [
     "Traditional format for maximum ATS compatibility",
     "Simple, clean structure that parses perfectly",
@@ -47,19 +40,10 @@ const templateFeatures: Record<TemplateSlug, string[]> = {
     "No graphics or complex formatting",
     "Proven layout trusted by recruiters",
   ],
-  "tech-focused": [
-    "Designed specifically for developers and engineers",
-    "Prominent skills and technologies section",
-    "Projects section with tech stack highlights",
-    "GitHub and portfolio link integration",
-    "Modern monospace font accents",
-  ],
 };
 
 const templateBestFor: Record<TemplateSlug, string[]> = {
-  "modern-professional": ["Business Analysts", "Marketing Professionals", "Project Managers", "Consultants"],
   "classic-ats": ["Large Corporations", "Government Positions", "Traditional Industries", "Career Changers"],
-  "tech-focused": ["Software Engineers", "Data Scientists", "DevOps Engineers", "Technical Architects"],
 };
 
 export default async function TemplateDetailPage({ params }: PageProps) {
@@ -173,28 +157,6 @@ export default async function TemplateDetailPage({ params }: PageProps) {
                 </Button>
               </Link>
             </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* Other Templates */}
-      <section className="bg-gray-50 py-16">
-        <div className="container mx-auto px-4">
-          <h2 className="text-2xl font-bold text-center mb-8">Explore Other Templates</h2>
-          <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-            {TEMPLATES.filter((t) => t.slug !== validSlug).map((t) => (
-              <Link key={t.slug} href={`/resume-template/${t.slug}`}>
-                <Card className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer">
-                  <div className="h-32 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                    <FileText className="h-12 w-12 text-gray-400" />
-                  </div>
-                  <div className="p-4">
-                    <h3 className="font-semibold">{t.name}</h3>
-                    <p className="text-sm text-gray-600 line-clamp-2">{t.description}</p>
-                  </div>
-                </Card>
-              </Link>
-            ))}
           </div>
         </div>
       </section>

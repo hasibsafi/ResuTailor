@@ -3,126 +3,115 @@
 
 import { TailoredResume, DesignOptions, DEFAULT_DESIGN_OPTIONS, FONT_FAMILIES, MARGIN_SIZES, HEADING_COLORS, TemplateSlug } from "@/types/resume";
 
-type AccentColor = "purple" | "blue" | "teal" | "rose" | "amber";
-
-const ACCENT_COLORS_MAP: Record<AccentColor, { name: string; primary: string; light: string; text: string }> = {
-  purple: { name: "Purple", primary: "#8B5CF6", light: "#ede9fe", text: "#5b21b6" },
-  blue: { name: "Blue", primary: "#2563EB", light: "#dbeafe", text: "#1e40af" },
-  teal: { name: "Teal", primary: "#0D9488", light: "#ccfbf1", text: "#0f766e" },
-  rose: { name: "Rose", primary: "#E11D48", light: "#ffe4e6", text: "#be123c" },
-  amber: { name: "Amber", primary: "#D97706", light: "#fef3c7", text: "#b45309" },
-};
-
 interface ServerTemplateProps {
   resume: TailoredResume;
   template: TemplateSlug;
-  accentColor?: AccentColor;
   designOptions?: DesignOptions;
 }
 
 export function generateResumeHTML({
   resume,
-  template,
-  accentColor = "purple",
+  template: _template,
   designOptions = DEFAULT_DESIGN_OPTIONS,
 }: ServerTemplateProps): string {
-  const fontFamily = FONT_FAMILIES.find(f => f.value === designOptions.fontFamily)?.css || FONT_FAMILIES[1].css;
+  const normalizeUrl = (url?: string) => {
+    if (!url) return "";
+    const trimmed = url.trim();
+    if (!trimmed) return "";
+    return trimmed;
+  };
+  const toHref = (url?: string) => {
+    const trimmed = normalizeUrl(url);
+    if (!trimmed) return "";
+    if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) return trimmed;
+    return `https://${trimmed}`;
+  };
+  const effectiveFontFamily = designOptions.fontFamily === "serif" ? "times" : designOptions.fontFamily;
+  const fontFamily = FONT_FAMILIES.find(f => f.value === effectiveFontFamily)?.css || FONT_FAMILIES[1].css;
   const padding = MARGIN_SIZES.find(m => m.value === designOptions.marginSize)?.padding || "2rem";
   const headingColor = HEADING_COLORS.find(c => c.value === designOptions.headingColor)?.hex || "#111827";
-  const accent = ACCENT_COLORS_MAP[accentColor];
 
   const baseFontSize = designOptions.fontSize;
-  const nameFontSize = baseFontSize + 12;
+  const nameFontSize = baseFontSize + 10;
   const defaultSectionTitleSize = baseFontSize + 4;
-  const defaultSmallFontSize = baseFontSize - 2;
+  const subheadingSize = baseFontSize + 2;
+  const defaultSmallFontSize = baseFontSize;
 
   // Section-specific font sizes (with fallbacks to defaults)
   const sectionFonts = designOptions.sectionFontSizes || {};
   const summaryTitleSize = sectionFonts.summaryTitle || defaultSectionTitleSize;
-  const summaryTextSize = sectionFonts.summaryText || defaultSmallFontSize;
+  const summaryTextSize = sectionFonts.summaryText || baseFontSize;
   const skillsTitleSize = sectionFonts.skillsTitle || defaultSectionTitleSize;
-  const skillsTextSize = sectionFonts.skillsText || defaultSmallFontSize;
+  const skillsTextSize = sectionFonts.skillsText || baseFontSize;
+  const contactInfoSize = sectionFonts.contactInfo || baseFontSize + 1;
+  const contactNameSize = sectionFonts.contactName || nameFontSize;
+  const contactEmailSize = sectionFonts.contactInfo || contactInfoSize;
+  const contactPhoneSize = sectionFonts.contactInfo || contactInfoSize;
+  const contactLocationSize = sectionFonts.contactInfo || contactInfoSize;
+  const contactLinkedinSize = sectionFonts.contactInfo || contactInfoSize;
+  const contactGithubSize = sectionFonts.contactInfo || contactInfoSize;
+  const contactWebsiteSize = sectionFonts.contactInfo || contactInfoSize;
   const projectSectionTitleSize = sectionFonts.projectSectionTitle || defaultSectionTitleSize;
-  const projectTitleSize = sectionFonts.projectTitle || baseFontSize;
-  const projectDescSize = sectionFonts.projectDescription || defaultSmallFontSize;
+  const projectTitleSize = sectionFonts.projectTitle || subheadingSize;
+  const projectDescSize = sectionFonts.projectDescription || baseFontSize;
   const experienceTitleSize = sectionFonts.experienceTitle || defaultSectionTitleSize;
-  const experienceTextSize = sectionFonts.experienceText || defaultSmallFontSize;
-  const experienceCompanySize = sectionFonts.experienceCompany || baseFontSize + 2;
-  const experienceRoleSize = sectionFonts.experienceRole || baseFontSize;
+  const experienceTextSize = sectionFonts.experienceText || baseFontSize;
+  const experienceCompanySize = sectionFonts.experienceCompany || subheadingSize;
+  const experienceRoleSize = sectionFonts.experienceRole || subheadingSize;
   const educationTitleSize = sectionFonts.educationTitle || defaultSectionTitleSize;
-  const educationTextSize = sectionFonts.educationText || defaultSmallFontSize;
+  const educationTextSize = sectionFonts.educationText || baseFontSize;
 
-  // Section order
-  const sectionOrder = designOptions.sectionOrder || ["summary", "skills", "projects", "experience", "education", "certifications"];
-
-  // Skill category custom names
-  const skillCategoryNames = designOptions.skillCategoryNames || {};
+  // Section order (append missing new sections)
+  const defaultSectionOrder = ["summary", "skills", "coursework", "experience", "projects", "leadership", "certifications", "education"];
+  const legacySectionOrder = ["summary", "education", "coursework", "experience", "projects", "skills", "leadership", "certifications"];
+  const hasLegacyOrder =
+    designOptions.sectionOrder &&
+    JSON.stringify(designOptions.sectionOrder) === JSON.stringify(legacySectionOrder);
+  const baseOrder = hasLegacyOrder ? defaultSectionOrder : designOptions.sectionOrder;
+  const sectionOrder = baseOrder && baseOrder.length > 0
+    ? [...baseOrder, ...defaultSectionOrder.filter(s => !baseOrder.includes(s))]
+    : defaultSectionOrder;
 
   // Section-specific font families (with fallbacks to global fontFamily)
   const sectionFontFamilies = designOptions.sectionFontFamilies || {};
   const getFontFamily = (key: keyof NonNullable<typeof designOptions.sectionFontFamilies>): string => {
-    const familyValue = sectionFontFamilies[key] || designOptions.fontFamily;
+    const familyValue = sectionFontFamilies[key] || effectiveFontFamily;
     return FONT_FAMILIES.find(f => f.value === familyValue)?.css || fontFamily;
   };
 
-  // Alignment styles - match Tailwind exactly
-  const alignmentStyle = {
-    left: "text-align: left;",
-    center: "text-align: center;",
-    right: "text-align: right;",
-  }[designOptions.headerAlignment];
+  const colors = { primary: headingColor, border: headingColor };
 
-  const contactJustify = {
-    left: "justify-content: flex-start;",
-    center: "justify-content: center;",
-    right: "justify-content: flex-end;",
-  }[designOptions.headerAlignment];
-
-  // Template-specific colors
-  const templateColors: Record<TemplateSlug, { primary: string; border: string }> = {
-    "classic-ats": { primary: headingColor, border: headingColor },
-    "modern-professional": { primary: headingColor, border: headingColor },
-    "tech-focused": { primary: accent.primary, border: accent.primary },
-  };
-  const colors = templateColors[template];
-
-  // Generate contact info - matching template exactly
   function generateContactInfo(): string {
     const items: string[] = [];
-    if (resume.contact.email) items.push(resume.contact.email);
-    if (resume.contact.phone) items.push(`| ${resume.contact.phone}`);
-    if (resume.contact.location) items.push(`| ${resume.contact.location}`);
-    if (resume.contact.linkedin) items.push(`| ${resume.contact.linkedin}`);
-    if (resume.contact.github) items.push(`| ${resume.contact.github}`);
-    
-    return items.map(item => `<span>${item}</span>`).join(' ');
+    if (resume.contact.phone) {
+      items.push(`<span style="font-size: ${contactPhoneSize}px; font-family: ${getFontFamily('contactInfo')};">${resume.contact.phone}</span>`);
+    }
+    if (resume.contact.email) {
+      items.push(`<span style="font-size: ${contactEmailSize}px; font-family: ${getFontFamily('contactInfo')};"><a href="mailto:${resume.contact.email}" style="text-decoration: none; color: inherit;">${resume.contact.email}</a></span>`);
+    }
+    if (resume.contact.linkedin) {
+      const linkedinUrl = toHref(resume.contact.linkedin);
+      items.push(`<span style="font-size: ${contactLinkedinSize}px; font-family: ${getFontFamily('contactInfo')};"><a href="${linkedinUrl}" target="_blank" rel="noreferrer" style="text-decoration: none; color: inherit;">${resume.contact.linkedin}</a></span>`);
+    }
+    if (resume.contact.github) {
+      const githubUrl = toHref(resume.contact.github);
+      items.push(`<span style="font-size: ${contactGithubSize}px; font-family: ${getFontFamily('contactInfo')};"><a href="${githubUrl}" target="_blank" rel="noreferrer" style="text-decoration: none; color: inherit;">${resume.contact.github}</a></span>`);
+    }
+    if (resume.contact.website) {
+      const websiteUrl = toHref(resume.contact.website);
+      items.push(`<span style="font-size: ${contactWebsiteSize}px; font-family: ${getFontFamily('contactInfo')};"><a href="${websiteUrl}" target="_blank" rel="noreferrer" style="text-decoration: none; color: inherit;">${resume.contact.website}</a></span>`);
+    }
+    return items.map(item => `<span>${item}</span>`).join(' • ');
   }
 
-  // Helper to generate template-specific header - matching ClassicATS exactly
-  // Template uses: mb-4 pb-3 = 16px margin-bottom, 12px padding-bottom
   function generateHeader(): string {
-    if (template === "tech-focused") {
-      return `
-        <header style="background: ${accent.primary}; color: white; padding: 16px ${padding}; margin: calc(-1 * ${padding}) calc(-1 * ${padding}) 16px calc(-1 * ${padding});">
-          <h1 style="font-size: ${nameFontSize}px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; ${alignmentStyle}">
-            ${resume.contact.name}
-          </h1>
-          <div style="margin-top: 4px; ${alignmentStyle} font-size: ${defaultSmallFontSize}px; color: rgba(255,255,255,0.9);">
-            ${generateContactInfo()}
-          </div>
-        </header>
-      `;
-    }
-
-    const headerBorderStyle = `border-bottom: 2px solid ${colors.border};`;
-
-    // Match template: mb-4 (16px) pb-3 (12px)
     return `
-      <header style="${alignmentStyle} margin-bottom: 16px; padding-bottom: 12px; ${headerBorderStyle}">
-        <h1 style="font-size: ${nameFontSize}px; font-weight: 700; color: ${colors.primary}; text-transform: uppercase; letter-spacing: 0.05em;">
+      <header style="text-align: center; margin-bottom: 16px;">
+        <h1 style="font-size: ${contactNameSize}px; font-weight: 700; color: ${colors.primary}; text-transform: uppercase; letter-spacing: 0.05em; font-family: ${getFontFamily('contactName')};">
           ${resume.contact.name}
         </h1>
-        <div style="margin-top: 4px; font-size: ${defaultSmallFontSize}px; color: #000;">
+        ${resume.contact.location ? `<div style="margin-top: 4px; font-size: ${contactLocationSize}px; font-family: ${getFontFamily('contactInfo')};">${resume.contact.location}</div>` : ""}
+        <div style="margin-top: 4px;">
           ${generateContactInfo()}
         </div>
       </header>
@@ -132,15 +121,8 @@ export function generateResumeHTML({
   // Helper to generate section title - matching template exactly
   // Template uses: mb-1.5 pb-0.5 = 6px margin-bottom, 2px padding-bottom
   function sectionTitle(title: string, fontSize: number = defaultSectionTitleSize): string {
-    let borderStyle = `border-bottom: 1px solid ${colors.border};`;
-    if (template === "tech-focused") {
-      borderStyle = `border-bottom: 2px solid ${accent.light};`;
-    } else if (template === "modern-professional") {
-      borderStyle = "";
-    }
-
     return `
-      <h2 style="font-size: ${fontSize}px; font-weight: 700; color: ${colors.primary}; text-transform: uppercase; margin-bottom: 6px; padding-bottom: 2px; ${borderStyle}">
+      <h2 style="font-size: ${fontSize}px; font-weight: 700; color: ${colors.primary}; text-transform: uppercase; margin-bottom: 6px; padding-bottom: 2px; border-bottom: 1px solid ${colors.border};">
         ${title}
       </h2>
     `;
@@ -153,7 +135,7 @@ export function generateResumeHTML({
     return `
       <section style="margin-bottom: 12px;">
         <h2 style="font-size: ${summaryTitleSize}px; font-weight: 700; color: ${colors.primary}; text-transform: uppercase; margin-bottom: 6px; padding-bottom: 2px; font-family: ${getFontFamily('summaryTitle')}; border-bottom: 1px solid ${colors.border};">
-          Professional Summary
+          Summary
         </h2>
         <p style="font-size: ${summaryTextSize}px; font-family: ${getFontFamily('summaryText')};">${resume.summary}</p>
       </section>
@@ -168,74 +150,58 @@ export function generateResumeHTML({
     const expItems = resume.experience.map(exp => {
       // Use list-style-position: outside so wrapped text aligns with first line text
       const highlights = exp.highlights && exp.highlights.length > 0
-        ? `<ul style="margin-top: 2px; font-size: ${experienceTextSize}px; font-family: ${getFontFamily('experienceText')}; list-style-type: disc; list-style-position: outside; padding-left: 1.2em;">
-            ${exp.highlights.map(h => `<li style="padding-left: 0.3em;">${h}</li>`).join('')}
+        ? `<ul style="margin-top: 2px; font-size: ${experienceTextSize}px; font-family: ${getFontFamily('experienceText')}; list-style-type: disc; list-style-position: outside; padding-left: 1.7em;">
+            ${exp.highlights.map(h => `<li>${h}</li>`).join('')}
            </ul>`
         : "";
 
-      if (template === "classic-ats") {
-        // Classic ATS: Company first (bigger), Title underneath - matching template exactly
-        return `
-          <div style="margin-bottom: 8px;">
-            <div style="display: flex; justify-content: space-between; align-items: baseline;">
-              <span style="font-weight: 700; font-size: ${experienceCompanySize}px; font-family: ${getFontFamily('experienceCompany')};">${exp.company}</span>
-              <span style="font-size: ${experienceTextSize}px; font-family: ${getFontFamily('experienceText')};">${exp.startDate} - ${exp.endDate || "Present"}</span>
-            </div>
-            <div style="font-size: ${experienceRoleSize}px; font-weight: 600; font-family: ${getFontFamily('experienceRole')};">
-              ${exp.title}${exp.location ? " | " + exp.location : ""}
-            </div>
-            ${highlights}
+      return `
+        <div style="margin-bottom: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: baseline;">
+            <span style="font-weight: 700; font-size: ${experienceCompanySize}px; font-family: ${getFontFamily('experienceCompany')};">${exp.company}</span>
+            <span style="font-weight: 700; font-size: ${experienceTextSize}px; font-family: ${getFontFamily('experienceText')};">${exp.startDate} - ${exp.endDate || "Present"}</span>
           </div>
-        `;
-      } else {
-        // Other templates: Title | Company format
-        const companyStyle = template === "modern-professional"
-          ? `color: ${colors.primary}; font-style: italic;`
-          : "font-style: italic;";
-
-        return `
-          <div style="margin-bottom: 8px;">
-            <div style="display: flex; justify-content: space-between; align-items: baseline;">
-              <div>
-                <span style="font-weight: 700;">${exp.title}</span>
-                <span style="${companyStyle}"> | ${exp.company}</span>
-              </div>
-              <span style="font-size: ${experienceTextSize}px;">${exp.startDate} - ${exp.endDate || "Present"}</span>
-            </div>
-            ${highlights}
+          <div style="font-size: ${experienceRoleSize}px; font-style: italic; font-family: ${getFontFamily('experienceRole')};">
+            ${exp.title}${exp.location ? " | " + exp.location : ""}
           </div>
-        `;
-      }
+          ${highlights}
+        </div>
+      `;
     }).join('');
-
-    const sectionName = template === "classic-ats" ? "Professional Experience" : "Experience";
 
     return `
       <section style="margin-bottom: 12px;">
         <h2 style="font-size: ${experienceTitleSize}px; font-weight: 700; color: ${colors.primary}; text-transform: uppercase; margin-bottom: 6px; padding-bottom: 2px; font-family: ${getFontFamily('experienceTitle')}; border-bottom: 1px solid ${colors.border};">
-          ${sectionName}
+          Experience
         </h2>
         ${expItems}
       </section>
     `;
   }
 
-  // Education section - matching template mb-1.5 = 6px per item
+  // Education section - matching LaTeX layout
   function generateEducation(): string {
     if (!resume.education || resume.education.length === 0) return "";
 
-    const eduItems = resume.education.map(edu => `
+    const eduItems = resume.education.map((edu, idx) => {
+      const eduFontStyle = designOptions.educationFontStyles?.[idx];
+      const eduTextSize = eduFontStyle?.size || educationTextSize;
+      const eduFontFam = eduFontStyle?.family
+        ? FONT_FAMILIES.find(f => f.value === eduFontStyle.family)?.css
+        : getFontFamily('educationText');
+      const institutionSize = eduFontStyle?.size || experienceCompanySize;
+      return `
       <div style="margin-bottom: 6px;">
         <div style="display: flex; justify-content: space-between; align-items: baseline;">
-          <span style="font-weight: 700;">${edu.degree}${edu.field ? ", " + edu.field : ""}</span>
-          <span style="font-size: ${educationTextSize}px;">${edu.endDate || edu.startDate || ""}</span>
+          <span style="font-weight: 700; font-size: ${institutionSize}px; font-family: ${eduFontFam};">${edu.institution}</span>
+          <span style="font-weight: 700; font-size: ${eduTextSize}px; font-family: ${eduFontFam};">${edu.endDate || edu.startDate || ""}</span>
         </div>
-        <div style="font-style: italic; font-size: ${educationTextSize}px;">
-          ${edu.institution}${edu.location ? ", " + edu.location : ""}
+        <div style="font-style: italic; font-size: ${eduTextSize}px; font-family: ${eduFontFam};">
+          ${edu.degree}${edu.field ? " in " + edu.field : ""}${edu.location ? " | " + edu.location : ""}
         </div>
-        ${edu.gpa ? `<div style="font-size: ${educationTextSize}px;">GPA: ${edu.gpa}</div>` : ""}
       </div>
-    `).join('');
+    `;
+    }).join('');
 
     return `
       <section style="margin-bottom: 12px;">
@@ -249,43 +215,73 @@ export function generateResumeHTML({
     `;
   }
 
-  // Skills section - comma-separated list of all technical skills (soft skills woven into content)
-  function generateSkills(): string {
-    if (!resume.skills) return "";
-
-    // Combine all technical skills into a single comma-separated list (exclude soft skills)
-    const allSkills = [
-      ...(resume.skills.technical || []),
-      ...(resume.skills.frameworks || []),
-      ...(resume.skills.tools || []),
-      ...(resume.skills.languages || []),
-      ...(resume.skills.other || []),
-    ].filter(Boolean);
-
-    if (allSkills.length === 0) return "";
+  // Coursework section
+  function generateCoursework(): string {
+    if (!resume.coursework || resume.coursework.length === 0) return "";
 
     return `
       <section style="margin-bottom: 12px;">
-        <h2 style="font-size: ${skillsTitleSize}px; font-weight: 700; color: ${colors.primary}; text-transform: uppercase; margin-bottom: 6px; padding-bottom: 2px; font-family: ${getFontFamily('skillsTitle')}; border-bottom: 1px solid ${colors.border};">
-          Skills
-        </h2>
-        <p style="font-size: ${skillsTextSize}px; font-family: ${getFontFamily('skillsText')};">
-          ${allSkills.join(", ")}
-        </p>
+        ${sectionTitle("Relevant Coursework", defaultSectionTitleSize)}
+        <div style="font-size: ${defaultSmallFontSize}px; column-count: 4; column-gap: 8px;">
+          <ul style="list-style-type: disc; list-style-position: outside; margin: 0; padding-left: 1.7em;">
+            ${resume.coursework.map(item => `<li>${item}</li>`).join("")}
+          </ul>
+        </div>
       </section>
     `;
   }
 
-  // Projects section - matching template mb-1.5 = 6px per item
+  // Skills section - labeled categories
+  function generateSkills(): string {
+    if (!resume.skills) return "";
+
+    const languageSkills = resume.skills.languages || [];
+    const frameworkSkills = resume.skills.frameworks || [];
+    const developerTools = resume.skills.tools || [];
+    const otherSkills = resume.skills.other || [];
+    const technicalSkills = resume.skills.technical || [];
+    const mustHaveLanguages = ["TypeScript", "SQL", "Python", "JavaScript", "C++", "C"];
+    const normalizedLanguages = Array.from(
+      new Set([
+        ...languageSkills,
+        ...mustHaveLanguages,
+      ])
+    );
+
+    if (normalizedLanguages.length === 0 && frameworkSkills.length === 0 && developerTools.length === 0) return "";
+
+    return `
+      <section style="margin-bottom: 12px;">
+        <h2 style="font-size: ${skillsTitleSize}px; font-weight: 700; color: ${colors.primary}; text-transform: uppercase; margin-bottom: 6px; padding-bottom: 2px; font-family: ${getFontFamily('skillsTitle')}; border-bottom: 1px solid ${colors.border};">
+          Technical Skills
+        </h2>
+        <div style="font-size: ${skillsTextSize}px; font-family: ${getFontFamily('skillsText')};">
+          ${normalizedLanguages.length > 0 ? `<div><strong>Languages:</strong> ${normalizedLanguages.join(", ")}</div>` : ""}
+          ${frameworkSkills.length > 0 ? `<div><strong>Frameworks:</strong> ${frameworkSkills.join(", ")}</div>` : ""}
+          ${developerTools.length > 0 ? `<div><strong>Tools:</strong> ${developerTools.join(", ")}</div>` : ""}
+        </div>
+      </section>
+    `;
+  }
+
+  // Projects section - with technologies and bullets
   function generateProjects(): string {
     if (!resume.projects || resume.projects.length === 0) return "";
 
     const projItems = resume.projects.map(proj => `
       <div style="margin-bottom: 6px;">
-        <span style="font-weight: 700; font-size: ${projectTitleSize}px; font-family: ${getFontFamily('projectTitle')};">${proj.name}</span>
-        ${proj.description ? `<div style="margin-top: 2px; font-size: ${projectDescSize}px; font-family: ${getFontFamily('projectDescription')};">${proj.description}</div>` : ""}
-        ${proj.url ? `<div style="margin-top: 2px; font-size: ${projectDescSize}px; font-family: ${getFontFamily('projectDescription')};">
-          Live demo: <a href="${proj.url.startsWith('http://') || proj.url.startsWith('https://') ? proj.url : `https://${proj.url}`}" target="_blank" rel="noreferrer" style="color: #1d4ed8; text-decoration: underline;">${proj.url}</a>
+        <div style="font-weight: 700; font-size: ${projectTitleSize}px; font-family: ${getFontFamily('projectTitle')};">
+          ${proj.name}${proj.technologies && proj.technologies.length > 0 ? ` <span style="font-weight: 400; font-style: italic; font-size: ${projectDescSize}px; font-family: ${getFontFamily('projectDescription')};">| ${proj.technologies.join(", ")}</span>` : ""}
+        </div>
+        ${proj.highlights && proj.highlights.length > 0
+          ? `<ul style="margin-top: 2px; font-size: ${projectDescSize}px; font-family: ${getFontFamily('projectDescription')}; list-style-type: disc; list-style-position: outside; padding-left: 1.7em;">
+              ${proj.highlights.map(item => `<li>${item}</li>`).join("")}
+            </ul>`
+          : proj.description
+          ? `<ul style="margin-top: 2px; font-size: ${projectDescSize}px; font-family: ${getFontFamily('projectDescription')}; list-style-type: disc; list-style-position: outside; padding-left: 1.7em;"><li>${proj.description}</li></ul>`
+          : ""}
+        ${proj.url ? `<div style="margin-top: 4px; font-size: ${projectDescSize + 1}px; font-family: ${getFontFamily('projectDescription')}; padding-left: 1.7em;">
+          Live demo: <a href="${toHref(proj.url)}" target="_blank" rel="noreferrer" style="text-decoration: underline; color: inherit;">${proj.url}</a>
         </div>` : ""}
       </div>
     `).join('');
@@ -300,18 +296,52 @@ export function generateResumeHTML({
     `;
   }
 
+  function generateLeadership(): string {
+    if (!resume.leadership || resume.leadership.length === 0) return "";
+
+    const items = resume.leadership.map(exp => {
+      const highlights = exp.highlights && exp.highlights.length > 0
+        ? `<ul style="margin-top: 2px; font-size: ${experienceTextSize}px; font-family: ${getFontFamily('experienceText')}; list-style-type: disc; list-style-position: outside; padding-left: 1.7em;">
+            ${exp.highlights.map(h => `<li>${h}</li>`).join('')}
+           </ul>`
+        : "";
+
+      return `
+        <div style="margin-bottom: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: baseline;">
+            <span style="font-weight: 700; font-size: ${experienceCompanySize}px; font-family: ${getFontFamily('experienceCompany')};">${exp.company}</span>
+            <span style="font-weight: 700; font-size: ${experienceTextSize}px; font-family: ${getFontFamily('experienceText')};">${exp.startDate} - ${exp.endDate || "Present"}</span>
+          </div>
+          <div style="font-size: ${experienceRoleSize}px; font-style: italic; font-family: ${getFontFamily('experienceRole')};">
+            ${exp.title}${exp.location ? " | " + exp.location : ""}
+          </div>
+          ${highlights}
+        </div>
+      `;
+    }).join("");
+
+    return `
+      <section style="margin-bottom: 12px;">
+        <h2 style="font-size: ${experienceTitleSize}px; font-weight: 700; color: ${colors.primary}; text-transform: uppercase; margin-bottom: 6px; padding-bottom: 2px; font-family: ${getFontFamily('experienceTitle')}; border-bottom: 1px solid ${colors.border};">
+          Leadership / Extracurricular
+        </h2>
+        ${items}
+      </section>
+    `;
+  }
+
   // Certifications section - using list-inside to match template
   function generateCertifications(): string {
     if (!resume.certifications || resume.certifications.length === 0) return "";
 
     const certItems = resume.certifications.map(cert => `
-      <li style="padding-left: 0.3em;">${cert.name}${cert.issuer ? " - " + cert.issuer : ""}${cert.date ? " (" + cert.date + ")" : ""}</li>
+      <li>${cert.name}${cert.issuer ? " - " + cert.issuer : ""}${cert.date ? " (" + cert.date + ")" : ""}</li>
     `).join('');
 
     return `
       <section style="break-inside: avoid;">
         ${sectionTitle("Certifications", defaultSectionTitleSize)}
-        <ul style="font-size: ${defaultSmallFontSize}px; list-style-type: disc; list-style-position: outside; padding-left: 1.2em;">
+        <ul style="font-size: ${defaultSmallFontSize}px; list-style-type: disc; list-style-position: outside; padding-left: 1.7em;">
           ${certItems}
         </ul>
       </section>
@@ -323,14 +353,18 @@ export function generateResumeHTML({
     switch (sectionKey) {
       case "summary":
         return generateSummary();
+      case "education":
+        return generateEducation();
+      case "coursework":
+        return generateCoursework();
+      case "experience":
+        return generateExperience();
       case "skills":
         return generateSkills();
       case "projects":
         return generateProjects();
-      case "experience":
-        return generateExperience();
-      case "education":
-        return generateEducation();
+      case "leadership":
+        return generateLeadership();
       case "certifications":
         return generateCertifications();
       default:
@@ -352,7 +386,7 @@ export function generateResumeHTML({
         
         @page :first {
           margin-top: 0;
-          margin-bottom: 0.2in;
+          margin-bottom: 0.05in;
         }
         
         * {
@@ -390,19 +424,17 @@ export function generateResumeHTML({
           hyphens: auto;
           -webkit-hyphens: auto;
           -ms-hyphens: auto;
-          text-align: justify;
-          text-justify: inter-word;
+          text-align: left;
         }
         
         /* Fix bullet point alignment - text wraps aligned to text start, not bullet */
         ul {
           list-style-position: outside;
-          padding-left: 1.2em;
+          padding-left: 1.7em;
           margin-left: 0;
         }
         
         ul li {
-          padding-left: 0.3em;
           text-align: left;
         }
         

@@ -7,9 +7,9 @@ import { useRef, useEffect, useState, useCallback, ReactNode } from "react";
 export const PAGE_WIDTH_PX = 816;
 export const PAGE_HEIGHT_PX = 1056;
 
-// Effective content height for first page (accounting for 0.2in bottom margin in PDF)
-// 11in - 0.2in = 10.8in ≈ 1037px
-const FIRST_PAGE_CONTENT_HEIGHT = 1037;
+// Effective content height for first page (accounting for 0.1in bottom margin in PDF)
+// 11in - 0.1in = 10.9in ≈ 1046px, then adjusted slightly up to align with PDF
+const FIRST_PAGE_CONTENT_HEIGHT = 1035;
 
 interface PagedResumePreviewProps {
   children: ReactNode;
@@ -28,13 +28,18 @@ export function PagedResumePreview({
   const [contentHeight, setContentHeight] = useState(PAGE_HEIGHT_PX);
   const [pageCount, setPageCount] = useState(1);
 
+  const PAGE_COUNT_EPSILON = 80;
+
   // Calculate content height and page count
   const measureContent = useCallback(() => {
     if (!contentRef.current) return;
     
     const totalHeight = contentRef.current.scrollHeight;
     setContentHeight(totalHeight);
-    const pages = Math.max(1, Math.ceil(totalHeight / PAGE_HEIGHT_PX));
+    const pages = Math.max(
+      1,
+      Math.ceil((totalHeight - PAGE_COUNT_EPSILON) / FIRST_PAGE_CONTENT_HEIGHT)
+    );
     setPageCount(pages);
   }, []);
 
@@ -58,7 +63,7 @@ export function PagedResumePreview({
   }, [measureContent]);
 
   // Calculate if content fits on one page (using effective content height)
-  const fitsOnOnePage = contentHeight <= FIRST_PAGE_CONTENT_HEIGHT;
+  const fitsOnOnePage = contentHeight <= FIRST_PAGE_CONTENT_HEIGHT + PAGE_COUNT_EPSILON;
 
   // Always show at least one full page, but extend if content overflows
   // This ensures the "paper" size stays fixed like a real page
@@ -104,21 +109,19 @@ export function PagedResumePreview({
           </div>
           
           {/* Page boundary indicator - show where page 1 ends if content overflows */}
-          {!fitsOnOnePage && (
-            <div 
-              className="absolute left-0 right-0 pointer-events-none"
-              style={{ 
-                top: `${FIRST_PAGE_CONTENT_HEIGHT * scale}px`,
-              }}
-            >
-              <div className="relative">
-                <div className="border-t-2 border-dashed border-red-400"></div>
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-red-50 text-red-600 text-xs px-2 py-0.5 rounded border border-red-300 whitespace-nowrap">
-                  Page 1 ends here
-                </div>
+          <div 
+            className="absolute left-0 right-0 pointer-events-none"
+            style={{ 
+              top: `${FIRST_PAGE_CONTENT_HEIGHT * scale}px`,
+            }}
+          >
+            <div className="relative">
+              <div className="border-t-2 border-dashed border-yellow-400"></div>
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-yellow-50 text-yellow-700 text-xs px-2 py-0.5 rounded border border-yellow-300 whitespace-nowrap">
+                Page 1 ends here
               </div>
             </div>
-          )}
+          </div>
         </div>
         
         {/* Page info */}

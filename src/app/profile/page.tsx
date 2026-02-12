@@ -112,7 +112,6 @@ export default function ProfilePage() {
           resume: item.tailoredResume,
           designOptions: item.designOptions || DEFAULT_DESIGN_OPTIONS,
           template: item.template || "classic-ats",
-          accentColor: item.accentColor || "purple",
           fileName,
         }),
       });
