@@ -107,11 +107,20 @@ export default function PreviewPage() {
   const [isExporting, setIsExporting] = useState(false);
 
   const handleGenerateCoverLetter = async () => {
-    const resumeForCoverLetter = tailoredResume || originalResume || null;
-    if (!resumeForCoverLetter) {
+    const resumeSource = tailoredResume || originalResume || null;
+    if (!resumeSource) {
       setError("Please generate a tailored resume first.");
       return;
     }
+    const resumeForCoverLetter: TailoredResume = tailoredResume
+      ? tailoredResume
+      : {
+          ...resumeSource,
+          summary: resumeSource.summary || "",
+          skills: resumeSource.skills || {},
+          matchedKeywords: [],
+          missingKeywords: [],
+        };
     const storedJobDescription = sessionStorage.getItem(`jobDescription-${generationId}`);
     if (!storedJobDescription) {
       setError("Job description not found. Please generate a new resume.");
