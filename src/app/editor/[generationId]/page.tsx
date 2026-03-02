@@ -84,7 +84,8 @@ function FontControl({
   family, 
   onFamilyChange,
   min = 8,
-  max = 30
+  max = 30,
+  step = 0.5
 }: { 
   label: string; 
   size: number; 
@@ -93,6 +94,7 @@ function FontControl({
   onFamilyChange: (val: FontFamily) => void;
   min?: number;
   max?: number;
+  step?: number;
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2 p-1 bg-gray-50 rounded border">
@@ -100,12 +102,12 @@ function FontControl({
       <span className="text-xs text-gray-600 min-w-12">{label}</span>
       <div className="flex items-center gap-1 flex-shrink-0">
         <Button variant="outline" size="sm" className="h-5 w-5 p-0"
-          onClick={() => onSizeChange(Math.max(min, size - 1))}
+          onClick={() => onSizeChange(Math.max(min, Math.round((size - step) * 10) / 10))}
           disabled={size <= min}
         ><Minus className="h-2 w-2" /></Button>
-        <span className="text-xs w-5 text-center">{size}</span>
+        <span className="text-xs min-w-[2.5rem] text-center">{size}</span>
         <Button variant="outline" size="sm" className="h-5 w-5 p-0"
-          onClick={() => onSizeChange(Math.min(max, size + 1))}
+          onClick={() => onSizeChange(Math.min(max, Math.round((size + step) * 10) / 10))}
           disabled={size >= max}
         ><Plus className="h-2 w-2" /></Button>
       </div>
@@ -339,7 +341,11 @@ export default function EditorPage() {
 
   const handleSaveAndPreview = () => {
     handleSave();
-    router.push(`/preview/${generationId}`);
+    if (generationId === "parsed-draft") {
+      router.push("/generate");
+    } else {
+      router.push(`/preview/${generationId}`);
+    }
   };
 
   const updateResume = (updates: Partial<TailoredResume>) => {
@@ -646,6 +652,12 @@ export default function EditorPage() {
   const getSkillCategoryName = (category: string) => {
     const defaults: Record<string, string> = {
       technical: "Technical Skills",
+      frontend: "Frontend",
+      backend: "Backend",
+      databases: "Databases",
+      infrastructure: "Infrastructure & DevOps",
+      security: "Security & Web Standards",
+      concepts: "Concepts",
       frameworks: "Frameworks",
       tools: "Tools",
       languages: "Languages",
@@ -824,39 +836,75 @@ export default function EditorPage() {
             <p className="text-sm text-gray-500 mb-3">Comma-separated lists that map to the Classic ATS layout.</p>
             <div className="space-y-3">
               <div>
-                <Label className="text-sm font-medium">Languages</Label>
+                <Label className="text-sm font-medium">Frontend</Label>
                 <Input
-                  value={(resume.skills?.languages || []).join(", ")}
+                  value={(resume.skills?.frontend || []).join(", ")}
                   onChange={(e) => {
                     const values = e.target.value.split(",").map(s => s.trim()).filter(Boolean);
-                    setResume(prev => prev ? { ...prev, skills: { ...prev.skills, languages: values } } : prev);
+                    setResume(prev => prev ? { ...prev, skills: { ...prev.skills, frontend: values } } : prev);
                     setHasChanges(true);
                   }}
-                  placeholder="Python, Java, C, JavaScript"
+                  placeholder="TypeScript, JavaScript (ES6+), React, Next.js, Angular, HTML5, CSS3, Tailwind CSS"
                 />
               </div>
               <div>
-                <Label className="text-sm font-medium">Frameworks</Label>
+                <Label className="text-sm font-medium">Backend</Label>
                 <Input
-                  value={(resume.skills?.frameworks || []).join(", ")}
+                  value={(resume.skills?.backend || []).join(", ")}
                   onChange={(e) => {
                     const values = e.target.value.split(",").map(s => s.trim()).filter(Boolean);
-                    setResume(prev => prev ? { ...prev, skills: { ...prev.skills, frameworks: values } } : prev);
+                    setResume(prev => prev ? { ...prev, skills: { ...prev.skills, backend: values } } : prev);
                     setHasChanges(true);
                   }}
-                  placeholder="React, Next.js, Tailwind"
+                  placeholder="Node.js, Python, FastAPI, RESTful API development"
                 />
               </div>
               <div>
-                <Label className="text-sm font-medium">Tools</Label>
+                <Label className="text-sm font-medium">Databases</Label>
                 <Input
-                  value={(resume.skills?.tools || []).join(", ")}
+                  value={(resume.skills?.databases || []).join(", ")}
                   onChange={(e) => {
                     const values = e.target.value.split(",").map(s => s.trim()).filter(Boolean);
-                    setResume(prev => prev ? { ...prev, skills: { ...prev.skills, tools: values } } : prev);
+                    setResume(prev => prev ? { ...prev, skills: { ...prev.skills, databases: values } } : prev);
                     setHasChanges(true);
                   }}
-                  placeholder="VS Code, GitHub, Docker"
+                  placeholder="PostgreSQL, Firebase Firestore"
+                />
+              </div>
+              <div>
+                <Label className="text-sm font-medium">Infrastructure & DevOps</Label>
+                <Input
+                  value={(resume.skills?.infrastructure || []).join(", ")}
+                  onChange={(e) => {
+                    const values = e.target.value.split(",").map(s => s.trim()).filter(Boolean);
+                    setResume(prev => prev ? { ...prev, skills: { ...prev.skills, infrastructure: values } } : prev);
+                    setHasChanges(true);
+                  }}
+                  placeholder="Docker, GitHub Actions (CI/CD), Git"
+                />
+              </div>
+              <div>
+                <Label className="text-sm font-medium">Security & Web Standards</Label>
+                <Input
+                  value={(resume.skills?.security || []).join(", ")}
+                  onChange={(e) => {
+                    const values = e.target.value.split(",").map(s => s.trim()).filter(Boolean);
+                    setResume(prev => prev ? { ...prev, skills: { ...prev.skills, security: values } } : prev);
+                    setHasChanges(true);
+                  }}
+                  placeholder="RBAC, secure headers (CSP, HSTS), Google reCAPTCHA"
+                />
+              </div>
+              <div>
+                <Label className="text-sm font-medium">Concepts</Label>
+                <Input
+                  value={(resume.skills?.concepts || []).join(", ")}
+                  onChange={(e) => {
+                    const values = e.target.value.split(",").map(s => s.trim()).filter(Boolean);
+                    setResume(prev => prev ? { ...prev, skills: { ...prev.skills, concepts: values } } : prev);
+                    setHasChanges(true);
+                  }}
+                  placeholder="Authentication flows, real-time systems, performance profiling"
                 />
               </div>
             </div>
@@ -1703,12 +1751,21 @@ export default function EditorPage() {
       <header className="bg-white border-b sticky top-0 z-50">
         <div className="px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link href={`/preview/${generationId}`}>
-              <Button variant="ghost" size="sm">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Preview
-              </Button>
-            </Link>
+            {generationId === "parsed-draft" ? (
+              <Link href="/generate">
+                <Button variant="ghost" size="sm">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Generate
+                </Button>
+              </Link>
+            ) : (
+              <Link href={`/preview/${generationId}`}>
+                <Button variant="ghost" size="sm">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Preview
+                </Button>
+              </Link>
+            )}
             <h1 className="text-lg font-semibold text-gray-900">Resume Editor</h1>
             {hasChanges && (
               <span className="text-sm text-amber-600 bg-amber-50 px-2 py-1 rounded">
@@ -1722,7 +1779,7 @@ export default function EditorPage() {
               Save
             </Button>
             <Button onClick={handleSaveAndPreview}>
-              Save & Preview
+              {generationId === "parsed-draft" ? "Save & Return to Generate" : "Save & Preview"}
             </Button>
             <Link href="/profile" className="text-gray-600 hover:text-gray-900">
               <span className="sr-only">Profile</span>

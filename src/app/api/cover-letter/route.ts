@@ -15,12 +15,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!jobDescription || jobDescription.length < 30) {
-      return NextResponse.json(
-        { error: "Job description must be at least 30 characters" },
-        { status: 400 }
-      );
-    }
+    // Job description is optional; when absent, a general cover letter is generated from the resume
 
     const sanitizeContact = (input: Record<string, unknown>) => {
       if (!input || typeof input !== "object") return;
@@ -96,7 +91,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const coverLetter = await generateCoverLetter(resumeResult.data, jobDescription);
+    const coverLetter = await generateCoverLetter(
+      resumeResult.data,
+      jobDescription && jobDescription.length >= 30 ? jobDescription : ""
+    );
 
     return NextResponse.json({
       success: true,

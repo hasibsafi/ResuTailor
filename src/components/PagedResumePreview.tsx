@@ -8,8 +8,8 @@ export const PAGE_WIDTH_PX = 816;
 export const PAGE_HEIGHT_PX = 1056;
 
 // Effective content height for first page (accounting for 0.1in bottom margin in PDF)
-// 11in - 0.1in = 10.9in ≈ 1046px, then adjusted slightly up to align with PDF
-const FIRST_PAGE_CONTENT_HEIGHT = 1035;
+// 11in - 0.1in = 10.9in ≈ 1046px, adjusted up so page-break line aligns with PDF output
+const FIRST_PAGE_CONTENT_HEIGHT = 1010;
 
 interface PagedResumePreviewProps {
   children: ReactNode;

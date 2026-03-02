@@ -89,19 +89,35 @@ export function generateResumeHTML({
     if (resume.contact.email) {
       items.push(`<span style="font-size: ${contactEmailSize}px; font-family: ${getFontFamily('contactInfo')};"><a href="mailto:${resume.contact.email}" style="text-decoration: none; color: inherit;">${resume.contact.email}</a></span>`);
     }
+    if (resume.contact.location) {
+      items.push(`<span style="font-size: ${contactLocationSize}px; font-family: ${getFontFamily('contactInfo')};">${resume.contact.location}</span>`);
+    }
     if (resume.contact.linkedin) {
       const linkedinUrl = toHref(resume.contact.linkedin);
-      items.push(`<span style="font-size: ${contactLinkedinSize}px; font-family: ${getFontFamily('contactInfo')};"><a href="${linkedinUrl}" target="_blank" rel="noreferrer" style="text-decoration: none; color: inherit;">${resume.contact.linkedin}</a></span>`);
+      items.push(`<span style="font-size: ${contactLinkedinSize}px; font-family: ${getFontFamily('contactInfo')};"><a href="${linkedinUrl}" target="_blank" rel="noreferrer" style="text-decoration: none; color: inherit;">LinkedIn</a></span>`);
     }
     if (resume.contact.github) {
       const githubUrl = toHref(resume.contact.github);
-      items.push(`<span style="font-size: ${contactGithubSize}px; font-family: ${getFontFamily('contactInfo')};"><a href="${githubUrl}" target="_blank" rel="noreferrer" style="text-decoration: none; color: inherit;">${resume.contact.github}</a></span>`);
+      items.push(`<span style="font-size: ${contactGithubSize}px; font-family: ${getFontFamily('contactInfo')};"><a href="${githubUrl}" target="_blank" rel="noreferrer" style="text-decoration: none; color: inherit;">Github</a></span>`);
     }
     if (resume.contact.website) {
       const websiteUrl = toHref(resume.contact.website);
       items.push(`<span style="font-size: ${contactWebsiteSize}px; font-family: ${getFontFamily('contactInfo')};"><a href="${websiteUrl}" target="_blank" rel="noreferrer" style="text-decoration: none; color: inherit;">${resume.contact.website}</a></span>`);
     }
-    return items.map(item => `<span>${item}</span>`).join(' • ');
+    items.push(`<span style="font-size: ${contactInfoSize}px; font-family: ${getFontFamily('contactInfo')};">U.S. Citizen</span>`);
+    const withSeparators = items.flatMap((item, idx) =>
+      idx === 0
+        ? [`<span>${item}</span>`]
+        : [
+            `<span aria-hidden="true" style="display: inline-block; margin: 0 16px;">•</span>`,
+            `<span>${item}</span>`,
+          ]
+    );
+    return `
+      <div style="display: flex; flex-wrap: wrap; justify-content: center; align-items: center; row-gap: 6px;">
+        ${withSeparators.join("")}
+      </div>
+    `;
   }
 
   function generateHeader(): string {
@@ -110,7 +126,6 @@ export function generateResumeHTML({
         <h1 style="font-size: ${contactNameSize}px; font-weight: 700; color: ${colors.primary}; text-transform: uppercase; letter-spacing: 0.05em; font-family: ${getFontFamily('contactName')};">
           ${resume.contact.name}
         </h1>
-        ${resume.contact.location ? `<div style="margin-top: 4px; font-size: ${contactLocationSize}px; font-family: ${getFontFamily('contactInfo')};">${resume.contact.location}</div>` : ""}
         <div style="margin-top: 4px;">
           ${generateContactInfo()}
         </div>
@@ -235,20 +250,16 @@ export function generateResumeHTML({
   function generateSkills(): string {
     if (!resume.skills) return "";
 
-    const languageSkills = resume.skills.languages || [];
-    const frameworkSkills = resume.skills.frameworks || [];
-    const developerTools = resume.skills.tools || [];
-    const otherSkills = resume.skills.other || [];
-    const technicalSkills = resume.skills.technical || [];
-    const mustHaveLanguages = ["TypeScript", "SQL", "Python", "JavaScript", "C++", "C"];
-    const normalizedLanguages = Array.from(
-      new Set([
-        ...languageSkills,
-        ...mustHaveLanguages,
-      ])
-    );
+    const rows: { label: string; items: string[] }[] = [
+      { label: "Frontend", items: resume.skills.frontend || [] },
+      { label: "Backend", items: resume.skills.backend || [] },
+      { label: "Databases", items: resume.skills.databases || [] },
+      { label: "Infrastructure & DevOps", items: resume.skills.infrastructure || [] },
+      { label: "Security & Web Standards", items: resume.skills.security || [] },
+      { label: "Concepts", items: resume.skills.concepts || [] },
+    ].filter(r => r.items.length > 0);
 
-    if (normalizedLanguages.length === 0 && frameworkSkills.length === 0 && developerTools.length === 0) return "";
+    if (rows.length === 0) return "";
 
     return `
       <section style="margin-bottom: 12px;">
@@ -256,22 +267,20 @@ export function generateResumeHTML({
           Technical Skills
         </h2>
         <div style="font-size: ${skillsTextSize}px; font-family: ${getFontFamily('skillsText')};">
-          ${normalizedLanguages.length > 0 ? `<div><strong>Languages:</strong> ${normalizedLanguages.join(", ")}</div>` : ""}
-          ${frameworkSkills.length > 0 ? `<div><strong>Frameworks:</strong> ${frameworkSkills.join(", ")}</div>` : ""}
-          ${developerTools.length > 0 ? `<div><strong>Tools:</strong> ${developerTools.join(", ")}</div>` : ""}
+          ${rows.map(r => `<div><strong>${r.label}:</strong> ${r.items.join(", ")}</div>`).join("")}
         </div>
       </section>
     `;
   }
 
-  // Projects section - with technologies and bullets
+  // Projects section - with links and bullets
   function generateProjects(): string {
     if (!resume.projects || resume.projects.length === 0) return "";
 
     const projItems = resume.projects.map(proj => `
       <div style="margin-bottom: 6px;">
         <div style="font-weight: 700; font-size: ${projectTitleSize}px; font-family: ${getFontFamily('projectTitle')};">
-          ${proj.name}${proj.technologies && proj.technologies.length > 0 ? ` <span style="font-weight: 400; font-style: italic; font-size: ${projectDescSize}px; font-family: ${getFontFamily('projectDescription')};">| ${proj.technologies.join(", ")}</span>` : ""}
+          ${proj.name}${proj.url ? ` <span style="font-weight: 400; font-size: ${projectDescSize}px; font-family: ${getFontFamily('projectDescription')};">| <a href="${toHref(proj.url)}" target="_blank" rel="noreferrer" style="text-decoration: underline; color: inherit;">${proj.url}</a></span>` : ""}
         </div>
         ${proj.highlights && proj.highlights.length > 0
           ? `<ul style="margin-top: 2px; font-size: ${projectDescSize}px; font-family: ${getFontFamily('projectDescription')}; list-style-type: disc; list-style-position: outside; padding-left: 1.7em;">
@@ -280,9 +289,6 @@ export function generateResumeHTML({
           : proj.description
           ? `<ul style="margin-top: 2px; font-size: ${projectDescSize}px; font-family: ${getFontFamily('projectDescription')}; list-style-type: disc; list-style-position: outside; padding-left: 1.7em;"><li>${proj.description}</li></ul>`
           : ""}
-        ${proj.url ? `<div style="margin-top: 4px; font-size: ${projectDescSize + 1}px; font-family: ${getFontFamily('projectDescription')}; padding-left: 1.7em;">
-          Live demo: <a href="${toHref(proj.url)}" target="_blank" rel="noreferrer" style="text-decoration: underline; color: inherit;">${proj.url}</a>
-        </div>` : ""}
       </div>
     `).join('');
 

@@ -82,6 +82,25 @@ export default function ModernProfessional({ resume, designOptions = DEFAULT_DES
     const familyValue = sectionFontFamilies[key] || designOptions.fontFamily;
     return FONT_FAMILIES.find(f => f.value === familyValue)?.css || fontFamily;
   };
+  const contactItems: React.ReactNode[] = [];
+  if (resume.contact.email) contactItems.push(<span key="email">{resume.contact.email}</span>);
+  if (resume.contact.phone) contactItems.push(<span key="phone">{resume.contact.phone}</span>);
+  if (resume.contact.location) contactItems.push(<span key="location">{resume.contact.location}</span>);
+  if (resume.contact.linkedin) {
+    contactItems.push(
+      <a key="linkedin" href={normalizeUrl(resume.contact.linkedin)} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">
+        LinkedIn
+      </a>
+    );
+  }
+  if (resume.contact.github) {
+    contactItems.push(
+      <a key="github" href={normalizeUrl(resume.contact.github)} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">
+        Github
+      </a>
+    );
+  }
+  contactItems.push(<span key="citizenship">U.S. Citizen</span>);
 
   // Section renderers
   const renderSummary = () => {
@@ -280,19 +299,14 @@ export default function ModernProfessional({ resume, designOptions = DEFAULT_DES
       {/* Header */}
       <header className={`pb-3 mb-4 ${alignmentClass}`} style={{ borderBottom: `2px solid ${headingColor}` }}>
         <h1 className="font-bold" style={{ fontSize: `${nameFontSize}px`, color: headingColor }}>{resume.contact.name}</h1>
-        <div className={`flex flex-wrap gap-x-4 gap-y-1 text-gray-600 mt-2 ${contactFlexClass}`} style={{ fontSize: `${smallFontSize}px` }}>
-          {resume.contact.email && <span>{resume.contact.email}</span>}
-          {resume.contact.phone && <span>{resume.contact.phone}</span>}
-          {resume.contact.location && <span>{resume.contact.location}</span>}
-          {resume.contact.linkedin && (
-            <a href={resume.contact.linkedin} className="text-blue-600 hover:underline">
-              LinkedIn
-            </a>
-          )}
-          {resume.contact.github && (
-            <a href={resume.contact.github} className="text-blue-600 hover:underline">
-              GitHub
-            </a>
+        <div className={`flex flex-wrap items-center gap-y-2 text-gray-600 mt-2 ${contactFlexClass}`} style={{ fontSize: `${smallFontSize}px` }}>
+          {contactItems.flatMap((item, idx) =>
+            idx === 0
+              ? [<span key={`item-${idx}`}>{item}</span>]
+              : [
+                  <span key={`sep-${idx}`} aria-hidden="true" className="mx-5">•</span>,
+                  <span key={`item-${idx}`}>{item}</span>,
+                ]
           )}
         </div>
       </header>

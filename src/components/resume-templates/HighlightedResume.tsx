@@ -44,24 +44,38 @@ export default function HighlightedResume({ resume, keywords }: HighlightedResum
     }
     return `https://${trimmed}`;
   };
+  const contactItems: React.ReactNode[] = [];
+  if (resume.contact.email) contactItems.push(<span key="email">{resume.contact.email}</span>);
+  if (resume.contact.phone) contactItems.push(<span key="phone">{resume.contact.phone}</span>);
+  if (resume.contact.location) contactItems.push(<span key="location">{resume.contact.location}</span>);
+  if (resume.contact.linkedin) {
+    contactItems.push(
+      <a key="linkedin" href={normalizeUrl(resume.contact.linkedin)} target="_blank" rel="noreferrer" className="text-green-600 hover:underline">
+        LinkedIn
+      </a>
+    );
+  }
+  if (resume.contact.github) {
+    contactItems.push(
+      <a key="github" href={normalizeUrl(resume.contact.github)} target="_blank" rel="noreferrer" className="text-green-600 hover:underline">
+        Github
+      </a>
+    );
+  }
+  contactItems.push(<span key="citizenship">U.S. Citizen</span>);
   return (
     <div className="p-8 max-w-[8.5in] mx-auto bg-white font-sans text-gray-800 print:p-0">
       {/* Header */}
       <header className="border-b-2 border-green-600 pb-4 mb-6">
         <h1 className="text-3xl font-bold text-gray-900">{resume.contact.name}</h1>
-        <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600 mt-2">
-          {resume.contact.email && <span>{resume.contact.email}</span>}
-          {resume.contact.phone && <span>{resume.contact.phone}</span>}
-          {resume.contact.location && <span>{resume.contact.location}</span>}
-          {resume.contact.linkedin && (
-            <a href={resume.contact.linkedin} className="text-green-600 hover:underline">
-              LinkedIn
-            </a>
-          )}
-          {resume.contact.github && (
-            <a href={resume.contact.github} className="text-green-600 hover:underline">
-              GitHub
-            </a>
+        <div className="flex flex-wrap items-center gap-y-2 text-sm text-gray-600 mt-2">
+          {contactItems.flatMap((item, idx) =>
+            idx === 0
+              ? [<span key={`item-${idx}`}>{item}</span>]
+              : [
+                  <span key={`sep-${idx}`} aria-hidden="true" className="mx-5">•</span>,
+                  <span key={`item-${idx}`}>{item}</span>,
+                ]
           )}
         </div>
       </header>
@@ -109,71 +123,29 @@ export default function HighlightedResume({ resume, keywords }: HighlightedResum
         <section className="mb-6">
           <h2 className="text-lg font-semibold text-green-600 uppercase tracking-wide mb-2">Skills</h2>
           <div className="space-y-1 text-sm">
-            {resume.skills.technical && resume.skills.technical.length > 0 && (
-              <p>
-                <span className="font-medium">Technical:</span>{" "}
-                {resume.skills.technical.map((skill, idx) => (
-                  <span key={idx}>
-                    {idx > 0 && ", "}
-                    {keywords.some(k => k.toLowerCase() === skill.toLowerCase()) ? (
-                      <mark className="bg-green-200 text-green-900 px-0.5 rounded">{skill}</mark>
-                    ) : skill}
-                  </span>
-                ))}
-              </p>
-            )}
-            {resume.skills.frameworks && resume.skills.frameworks.length > 0 && (
-              <p>
-                <span className="font-medium">Frameworks:</span>{" "}
-                {resume.skills.frameworks.map((skill, idx) => (
-                  <span key={idx}>
-                    {idx > 0 && ", "}
-                    {keywords.some(k => k.toLowerCase() === skill.toLowerCase()) ? (
-                      <mark className="bg-green-200 text-green-900 px-0.5 rounded">{skill}</mark>
-                    ) : skill}
-                  </span>
-                ))}
-              </p>
-            )}
-            {resume.skills.tools && resume.skills.tools.length > 0 && (
-              <p>
-                <span className="font-medium">Tools:</span>{" "}
-                {resume.skills.tools.map((skill, idx) => (
-                  <span key={idx}>
-                    {idx > 0 && ", "}
-                    {keywords.some(k => k.toLowerCase() === skill.toLowerCase()) ? (
-                      <mark className="bg-green-200 text-green-900 px-0.5 rounded">{skill}</mark>
-                    ) : skill}
-                  </span>
-                ))}
-              </p>
-            )}
-            {resume.skills.languages && resume.skills.languages.length > 0 && (
-              <p>
-                <span className="font-medium">Languages:</span>{" "}
-                {resume.skills.languages.map((skill, idx) => (
-                  <span key={idx}>
-                    {idx > 0 && ", "}
-                    {keywords.some(k => k.toLowerCase() === skill.toLowerCase()) ? (
-                      <mark className="bg-green-200 text-green-900 px-0.5 rounded">{skill}</mark>
-                    ) : skill}
-                  </span>
-                ))}
-              </p>
-            )}
-            {resume.skills.other && resume.skills.other.length > 0 && (
-              <p>
-                <span className="font-medium">Other:</span>{" "}
-                {resume.skills.other.map((skill, idx) => (
-                  <span key={idx}>
-                    {idx > 0 && ", "}
-                    {keywords.some(k => k.toLowerCase() === skill.toLowerCase()) ? (
-                      <mark className="bg-green-200 text-green-900 px-0.5 rounded">{skill}</mark>
-                    ) : skill}
-                  </span>
-                ))}
-              </p>
-            )}
+            {([
+              { label: "Frontend", items: resume.skills.frontend },
+              { label: "Backend", items: resume.skills.backend },
+              { label: "Databases", items: resume.skills.databases },
+              { label: "Infrastructure & DevOps", items: resume.skills.infrastructure },
+              { label: "Security & Web Standards", items: resume.skills.security },
+              { label: "Concepts", items: resume.skills.concepts },
+              { label: "Other", items: resume.skills.other },
+            ] as { label: string; items?: string[] }[])
+              .filter(row => row.items && row.items.length > 0)
+              .map((row, ridx) => (
+                <p key={ridx}>
+                  <span className="font-medium">{row.label}:</span>{" "}
+                  {row.items!.map((skill, idx) => (
+                    <span key={idx}>
+                      {idx > 0 && ", "}
+                      {keywords.some(k => k.toLowerCase() === skill.toLowerCase()) ? (
+                        <mark className="bg-green-200 text-green-900 px-0.5 rounded">{skill}</mark>
+                      ) : skill}
+                    </span>
+                  ))}
+                </p>
+              ))}
           </div>
         </section>
       )}
@@ -208,17 +180,17 @@ export default function HighlightedResume({ resume, keywords }: HighlightedResum
             <div key={idx} className="mb-3">
               <h3 className="font-semibold text-gray-900">
                 {project.name}
+                {project.url && (
+                  <span className="font-normal text-sm">
+                    {" | "}
+                    <a href={normalizeUrl(project.url)} target="_blank" rel="noreferrer" className="text-green-600 underline">
+                      {project.url}
+                    </a>
+                  </span>
+                )}
               </h3>
               {project.description && (
                 <p className="text-sm text-gray-600 mt-0.5">{highlightText(project.description, keywords)}</p>
-              )}
-              {project.url && (
-                <div className="text-sm mt-0.5">
-                  Live demo:{" "}
-                  <a href={normalizeUrl(project.url)} target="_blank" rel="noreferrer" className="text-green-600 underline">
-                    {project.url}
-                  </a>
-                </div>
               )}
             </div>
           ))}

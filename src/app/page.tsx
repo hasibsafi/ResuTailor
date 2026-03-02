@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, Sparkles, Download, ArrowRight, CheckCircle, UserCircle, ShieldCheck, Zap, Clock, BadgeCheck, Star, Layers, Lock, ArrowUpRight } from "lucide-react";
+import { FileText, Sparkles, Download, ArrowRight, CheckCircle, UserCircle, ShieldCheck, Zap, Clock, BadgeCheck, Star, Layers, Lock, ArrowUpRight, Search } from "lucide-react";
 import AuthButton from "@/components/auth/AuthButton";
 import { useAuth } from "@/components/auth/AuthProvider";
 
@@ -11,114 +11,125 @@ export default function HomePage() {
   const { user } = useAuth();
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
-      {/* Navigation */}
-      <nav className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <Link href="/" className="text-2xl font-bold text-gray-900">
-            Resu<span className="text-blue-600">Tailor</span>
+    <div
+      className="min-h-screen"
+      style={{
+        fontFamily: "Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif",
+        background: "radial-gradient(1200px 600px at 50% 10%, rgba(0,110,220,0.08), transparent 60%), linear-gradient(180deg, #F5F9FC 0%, #EEF5FD 40%, #FFFFFF 100%)",
+      }}
+    >
+      {/* Navbar - design spec */}
+      <nav className="h-[72px] flex items-center justify-between px-4 md:px-6 lg:px-[24px] max-w-[1200px] mx-auto">
+        <Link href="/" className="flex items-center gap-2" style={{ color: "#0B2B4B" }}>
+          <span className="text-xl font-bold">Resu</span>
+          <span className="text-xl font-bold" style={{ color: "#006EDC" }}>Tailor</span>
+        </Link>
+        <div className="hidden md:flex items-center gap-6" style={{ fontSize: 14, fontWeight: 500 }}>
+          <a href="#template" className="hover:opacity-80 transition" style={{ color: "#123A5B" }}>
+            ATS Template
+          </a>
+          <Link href="/pricing" className="hover:opacity-80 transition" style={{ color: "#123A5B" }}>
+            Pricing
           </Link>
-          <div className="flex items-center gap-6">
-            <a href="#template" className="text-gray-600 hover:text-gray-900 transition">
-              ATS Template
-            </a>
-            <Link href="/pricing" className="text-gray-600 hover:text-gray-900 transition">
-              Pricing
+          {user && (
+            <Link href="/profile" className="hover:opacity-80 transition" style={{ color: "#123A5B" }}>
+              <UserCircle className="h-5 w-5" />
             </Link>
-            {user && (
-              <Link href="/profile" className="text-gray-600 hover:text-gray-900 transition">
-                <span className="sr-only">Profile</span>
-                <UserCircle className="h-6 w-6" />
-              </Link>
-            )}
-            <Link href="/generate">
-              <Button variant="outline">Get Started</Button>
-            </Link>
-            <AuthButton />
-          </div>
+          )}
+        </div>
+        <div className="flex items-center gap-3">
+          <button className="p-2 rounded-lg hover:bg-white/50 transition" aria-label="Search" style={{ color: "#0B2B4B" }}>
+            <Search className="h-[18px] w-[18px]" />
+          </button>
+          <AuthButton />
+          <Link href="/generate">
+            <Button
+              size="sm"
+              className="rounded-[12px] font-semibold"
+              style={{
+                background: "#006EDC",
+                color: "#FFFFFF",
+                fontSize: 15,
+                fontWeight: 600,
+                paddingLeft: 20,
+                paddingRight: 20,
+              }}
+            >
+              Get Started
+            </Button>
+          </Link>
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-blue-50 via-white to-white" />
-        <div className="container mx-auto px-4 py-20 relative">
-          <div className="grid lg:grid-cols-[1.1fr_0.9fr] gap-12 items-center">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full bg-blue-600/10 text-blue-700 px-4 py-2 text-sm font-semibold mb-6">
-                <Star className="h-4 w-4" />
-                One ATS‑tested resume template
-              </div>
-              <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-                The fastest way to a{" "}
-                <span className="text-blue-600">screen‑passing resume</span>
-              </h1>
-              <p className="text-lg text-gray-600 mb-8 max-w-xl">
-                Stop guessing templates. ResuTailor uses one proven ATS format and tailors your content to every job description with precision.
-              </p>
-              <div className="flex flex-wrap gap-4">
-                <Link href="/generate">
-                  <Button size="lg" className="text-lg px-8 py-6">
-                    Generate My Resume
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </Button>
-                </Link>
-                <Link href="/pricing">
-                  <Button size="lg" variant="outline" className="text-lg px-8 py-6">
-                    See Pricing
-                  </Button>
-                </Link>
-              </div>
-              <div className="mt-8 grid sm:grid-cols-3 gap-4 text-sm text-gray-600">
-                <div className="flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4 text-green-600" />
-                  ATS‑safe layout
-                </div>
-                <div className="flex items-center gap-2">
-                  <Zap className="h-4 w-4 text-blue-600" />
-                  Tailored in minutes
-                </div>
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-purple-600" />
-                  Instant preview
-                </div>
-              </div>
-            </div>
-            <div className="relative">
-              <div className="absolute -inset-8 bg-blue-100 rounded-[32px] blur-2xl opacity-60" />
-              <div className="relative bg-white rounded-2xl border shadow-2xl p-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="h-3 w-24 bg-blue-100 rounded-full" />
-                    <div className="h-3 w-16 bg-gray-100 rounded-full" />
-                  </div>
-                  <div className="h-6 w-48 bg-gray-900/10 rounded" />
-                  <div className="space-y-2">
-                    <div className="h-3 w-full bg-gray-100 rounded" />
-                    <div className="h-3 w-11/12 bg-gray-100 rounded" />
-                    <div className="h-3 w-10/12 bg-gray-100 rounded" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3 pt-2">
-                    <div className="h-14 rounded-lg border bg-blue-50/60" />
-                    <div className="h-14 rounded-lg border bg-blue-50/60" />
-                  </div>
-                  <div className="space-y-2 pt-2">
-                    <div className="h-3 w-full bg-gray-100 rounded" />
-                    <div className="h-3 w-5/6 bg-gray-100 rounded" />
-                    <div className="h-3 w-2/3 bg-gray-100 rounded" />
-                  </div>
-                  <div className="flex items-center gap-2 pt-2">
-                    <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-full">ATS</span>
-                    <span className="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">Keywords</span>
-                    <span className="text-xs font-medium text-purple-600 bg-purple-50 px-2 py-1 rounded-full">PDF</span>
-                  </div>
-                </div>
-              </div>
-              <div className="absolute -bottom-6 left-6 right-6 bg-white/90 border rounded-2xl shadow-lg p-4 backdrop-blur-sm">
-                <div className="flex items-center gap-3 text-sm text-gray-600">
-                  <BadgeCheck className="h-5 w-5 text-blue-600" />
-                  ATS‑verified structure • keyword‑aligned content • clean PDF export
-                </div>
+      {/* Hero Section - design spec */}
+      <section
+        className="relative overflow-hidden flex flex-col items-center text-center"
+        style={{
+          minHeight: 720,
+          paddingTop: 72,
+          paddingBottom: 80,
+          paddingLeft: 16,
+          paddingRight: 16,
+        }}
+      >
+        <div className="w-full max-w-[1200px] mx-auto flex flex-col items-center">
+          <h1
+            className="font-extrabold max-w-[980px] mx-auto mb-6"
+            style={{
+              color: "#0B2B4B",
+              fontSize: "clamp(32px, 5vw, 56px)",
+              lineHeight: 1.05,
+              letterSpacing: -0.8,
+            }}
+          >
+            Instantly Tailor Your Resume with
+            <br />
+            AI-Powered, One-Click Suggestions
+          </h1>
+          <p
+            className="max-w-[820px] mx-auto mb-8"
+            style={{
+              color: "#2E5D87",
+              fontSize: "clamp(16px, 2vw, 18px)",
+              lineHeight: 1.6,
+              fontWeight: 400,
+            }}
+          >
+            ResuTailor&apos;s AI-powered resume editor is a faster, more intuitive way to tailor your resume to a specific job description. See clear, in-context suggestions that you can accept with a single click.
+          </p>
+          <Link href="/generate">
+            <Button
+              size="lg"
+              className="rounded-[14px] font-semibold hover:opacity-95 transition"
+              style={{
+                background: "#006EDC",
+                color: "#FFFFFF",
+                fontSize: 15,
+                fontWeight: 600,
+                paddingLeft: 24,
+                paddingRight: 24,
+                paddingTop: 14,
+                paddingBottom: 14,
+                boxShadow: "0 8px 20px rgba(0, 110, 220, 0.18)",
+              }}
+            >
+              One-click optimize your resume
+            </Button>
+          </Link>
+          {/* Hero image card - placeholder per design spec (max 1040px desktop, 680px tablet, 360px mobile) */}
+          <div
+            className="w-full max-w-[1040px] md:max-w-[680px] max-md:max-w-[min(680px,calc(100vw-32px))] max-[480px]:max-w-[360px] mt-9 rounded-[18px] overflow-hidden border"
+            style={{
+              boxShadow: "0 16px 60px rgba(15, 30, 60, 0.14)",
+              borderColor: "#D9E6F5",
+              background: "#FFFFFF",
+            }}
+          >
+            <div className="aspect-[16/10] bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
+              <div className="text-center p-8">
+                <FileText className="h-24 w-24 mx-auto mb-4 text-slate-400" />
+                <p className="text-slate-500 font-medium">Resume editor preview</p>
+                <p className="text-slate-400 text-sm mt-1">Skills sidebar • Accept/reject suggestions • ATS-optimized layout</p>
               </div>
             </div>
           </div>
@@ -126,17 +137,17 @@ export default function HomePage() {
       </section>
 
       {/* Trust / Metrics */}
-      <section className="container mx-auto px-4 py-12">
+      <section className="max-w-[1200px] mx-auto px-4 md:px-5 lg:px-6 py-12">
         <div className="grid sm:grid-cols-3 gap-6 text-center">
           {[
             { label: "ATS‑tested format", value: "1 template" },
             { label: "Tailoring time", value: "< 2 minutes" },
             { label: "Export options", value: "PDF ready" },
           ].map((item) => (
-            <Card key={item.label} className="border-dashed">
+            <Card key={item.label} className="border" style={{ borderColor: "#D9E6F5", background: "#FFFFFF", boxShadow: "0 10px 30px rgba(15, 30, 60, 0.08)", borderRadius: 14 }}>
               <CardHeader>
-                <CardTitle className="text-2xl">{item.value}</CardTitle>
-                <div className="text-sm text-gray-600">{item.label}</div>
+                <CardTitle className="text-2xl" style={{ color: "#0B2B4B" }}>{item.value}</CardTitle>
+                <div className="text-sm" style={{ color: "#6B7C93" }}>{item.label}</div>
               </CardHeader>
             </Card>
           ))}
@@ -144,12 +155,12 @@ export default function HomePage() {
       </section>
 
       {/* Single Template Highlight */}
-      <section id="template" className="bg-gray-50 py-20">
-        <div className="container mx-auto px-4">
+      <section id="template" className="py-20" style={{ background: "#F5F9FC" }}>
+        <div className="max-w-[1200px] mx-auto px-4 md:px-5 lg:px-6">
           <div className="grid lg:grid-cols-2 gap-10 items-center max-w-6xl mx-auto">
             <div>
-              <h2 className="text-3xl font-bold mb-4">One template. Zero guesswork.</h2>
-              <p className="text-gray-600 mb-6">
+              <h2 className="text-3xl font-bold mb-4" style={{ color: "#0B2B4B" }}>One template. Zero guesswork.</h2>
+              <p className="mb-6" style={{ color: "#2E5D87" }}>
                 A single ATS‑tested layout with clean typography, consistent spacing, and recruiter‑friendly sections.
                 Your content adapts to the job—never the template.
               </p>
@@ -160,17 +171,17 @@ export default function HomePage() {
                   { title: "Privacy First", icon: Lock, desc: "No sharing or selling of your data." },
                   { title: "Export‑Ready", icon: Download, desc: "Clean PDF in one click." },
                 ].map((feature) => (
-                  <Card key={feature.title} className="bg-white">
+                  <Card key={feature.title} style={{ background: "#FFFFFF", borderColor: "#D9E6F5", borderRadius: 14, boxShadow: "0 10px 30px rgba(15, 30, 60, 0.08)" }}>
                     <CardHeader className="space-y-2">
-                      <feature.icon className="h-5 w-5 text-blue-600" />
-                      <CardTitle className="text-base">{feature.title}</CardTitle>
-                      <div className="text-sm text-gray-600">{feature.desc}</div>
+                      <feature.icon className="h-5 w-5" style={{ color: "#006EDC" }} />
+                      <CardTitle className="text-base" style={{ color: "#0B2B4B" }}>{feature.title}</CardTitle>
+                      <div className="text-sm" style={{ color: "#6B7C93" }}>{feature.desc}</div>
                     </CardHeader>
                   </Card>
                 ))}
               </div>
             </div>
-            <div className="bg-white rounded-2xl border shadow-lg p-4">
+            <div className="rounded-[18px] border p-4" style={{ background: "#FFFFFF", borderColor: "#D9E6F5", boxShadow: "0 16px 60px rgba(15, 30, 60, 0.14)" }}>
               <img
                 src="/resutailor%20ats%20resume%20template.jpeg"
                 alt="ResuTailor ATS Resume Template"
@@ -182,11 +193,11 @@ export default function HomePage() {
       </section>
 
       {/* Features */}
-      <section className="container mx-auto px-4 py-20">
+      <section className="max-w-[1200px] mx-auto px-4 md:px-5 lg:px-6 py-20">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold">Everything you need. Nothing you don’t.</h2>
-            <p className="text-gray-600 mt-3">
+            <h2 className="text-3xl font-bold" style={{ color: "#0B2B4B" }}>Everything you need. Nothing you don’t.</h2>
+            <p className="mt-3" style={{ color: "#2E5D87" }}>
               A focused experience designed to produce one clean, ATS‑ready resume every time.
             </p>
           </div>
@@ -200,14 +211,14 @@ export default function HomePage() {
               <div key={feature.title} className="flex gap-4">
                 <CheckCircle className="h-6 w-6 text-green-500 flex-shrink-0 mt-1" />
                 <div>
-                  <h3 className="font-semibold text-lg">{feature.title}</h3>
-                  <p className="text-gray-600">{feature.desc}</p>
+                  <h3 className="font-semibold text-lg" style={{ color: "#0B2B4B" }}>{feature.title}</h3>
+                  <p style={{ color: "#6B7C93" }}>{feature.desc}</p>
                 </div>
               </div>
             ))}
           </div>
           <div className="mt-10 text-center">
-            <Link href="/generate" className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium">
+            <Link href="/generate" className="inline-flex items-center gap-2 font-medium hover:opacity-80 transition" style={{ color: "#006EDC" }}>
               Start tailoring now <ArrowUpRight className="h-4 w-4" />
             </Link>
           </div>
@@ -215,10 +226,10 @@ export default function HomePage() {
       </section>
 
       {/* Pricing */}
-      <section className="bg-blue-600 text-white py-20">
-        <div className="container mx-auto px-4 text-center">
+      <section className="text-white py-20" style={{ background: "#006EDC" }}>
+        <div className="max-w-[1200px] mx-auto px-4 md:px-5 lg:px-6 text-center">
           <h2 className="text-3xl font-bold mb-4">Simple, transparent pricing</h2>
-          <p className="text-blue-100 mb-10 max-w-2xl mx-auto">
+          <p className="mb-10 max-w-2xl mx-auto" style={{ color: "rgba(255,255,255,0.85)" }}>
             Preview for free. Pay only when you want a clean export.
           </p>
           <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
@@ -229,13 +240,18 @@ export default function HomePage() {
             ].map((plan, idx) => (
               <Card
                 key={plan.label}
-                className={`border-white/20 text-white ${idx === 1 ? "bg-white/20 ring-2 ring-white/40" : "bg-white/10"}`}
+                className={`text-white ${idx === 1 ? "ring-2 ring-white/40" : ""}`}
+                style={{
+                  borderColor: "rgba(255,255,255,0.2)",
+                  background: idx === 1 ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.1)",
+                  borderRadius: 18,
+                }}
               >
                 <CardHeader>
                   <CardTitle className="text-3xl">{plan.price}</CardTitle>
-                  <div className="text-blue-100">{plan.label}</div>
+                  <div style={{ color: "rgba(255,255,255,0.9)" }}>{plan.label}</div>
                 </CardHeader>
-                <CardContent className="text-blue-50">{plan.desc}</CardContent>
+                <CardContent style={{ color: "rgba(255,255,255,0.8)" }}>{plan.desc}</CardContent>
               </Card>
             ))}
           </div>
@@ -250,14 +266,22 @@ export default function HomePage() {
       </section>
 
       {/* CTA */}
-      <section className="container mx-auto px-4 py-24 text-center">
+      <section className="max-w-[1200px] mx-auto px-4 md:px-5 lg:px-6 py-24 text-center">
         <div className="max-w-3xl mx-auto">
-          <h2 className="text-4xl font-bold mb-4">Ready for a resume that passes ATS?</h2>
-          <p className="text-gray-600 mb-8">
+          <h2 className="text-4xl font-bold mb-4" style={{ color: "#0B2B4B" }}>Ready for a resume that passes ATS?</h2>
+          <p className="mb-8" style={{ color: "#2E5D87" }}>
             Upload your resume, paste the job description, and export a clean ATS‑ready PDF in minutes.
           </p>
           <Link href="/generate">
-            <Button size="lg" className="text-lg px-8 py-6">
+            <Button
+              size="lg"
+              className="text-lg px-8 py-6 rounded-[14px] font-semibold hover:opacity-95 transition"
+              style={{
+                background: "#006EDC",
+                color: "#FFFFFF",
+                boxShadow: "0 8px 20px rgba(0, 110, 220, 0.18)",
+              }}
+            >
               Build My ATS Resume
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
@@ -266,19 +290,19 @@ export default function HomePage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t bg-gray-50 py-12">
-        <div className="container mx-auto px-4">
+      <footer className="border-t py-12" style={{ background: "#F5F9FC", borderColor: "#D9E6F5" }}>
+        <div className="max-w-[1200px] mx-auto px-4 md:px-5 lg:px-6">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <div className="text-2xl font-bold text-gray-900">
-              Resu<span className="text-blue-600">Tailor</span>
+            <div className="text-2xl font-bold" style={{ color: "#0B2B4B" }}>
+              Resu<span style={{ color: "#006EDC" }}>Tailor</span>
             </div>
-            <div className="flex gap-6 text-gray-600">
+            <div className="flex gap-6" style={{ color: "#6B7C93" }}>
               <Link href="/resume-templates" className="hover:text-gray-900">Templates</Link>
               <Link href="/pricing" className="hover:text-gray-900">Pricing</Link>
               <Link href="/privacy" className="hover:text-gray-900">Privacy</Link>
               <Link href="/terms" className="hover:text-gray-900">Terms</Link>
             </div>
-            <div className="text-gray-500 text-sm">
+            <div className="text-sm" style={{ color: "#6B7C93" }}>
               © 2025 ResuTailor. All rights reserved.
             </div>
           </div>

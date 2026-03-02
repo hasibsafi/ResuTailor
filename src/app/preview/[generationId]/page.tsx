@@ -269,90 +269,62 @@ export default function PreviewPage() {
   const handleAddKeyword = (keyword: string) => {
     if (!tailoredResume || addedKeywords.includes(keyword)) return;
     
-    const languageSet = new Set([
-      "javascript",
-      "typescript",
-      "python",
-      "java",
-      "c",
-      "c++",
-      "c#",
-      "go",
-      "golang",
-      "ruby",
-      "php",
-      "swift",
-      "kotlin",
-      "rust",
-      "scala",
-      "sql",
-      "bash",
-      "shell",
+    const frontendSet = new Set([
+      "javascript", "typescript", "html", "css", "html5", "css3",
+      "jsx", "react", "next.js", "nextjs", "angular", "vue", "svelte",
+      "tailwind", "tailwind css", "redux", "es6", "es6+",
+      "javascript (es6+)",
     ]);
-    const frameworkSet = new Set([
-      "react",
-      "next.js",
-      "nextjs",
-      "angular",
-      "vue",
-      "svelte",
-      "tailwind",
-      "tailwind css",
-      "fastapi",
-      "django",
-      "flask",
-      "spring",
-      "node.js",
-      "nodejs",
-      "express",
-      "nestjs",
+    const backendSet = new Set([
+      "node.js", "nodejs", "python", "fastapi", "django", "flask",
+      "express", "nestjs", "spring", "java", "c", "c++", "c#",
+      "go", "golang", "ruby", "php", "swift", "kotlin", "rust",
+      "scala", "sql", "bash", "shell",
+      "restful api development", "restful apis", "api integrations",
     ]);
-    const toolSet = new Set([
-      "git",
-      "github",
-      "git workflow",
-      "docker",
-      "firebase",
-      "firestore",
-      "firebase admin sdk",
-      "google recaptcha",
-      "ci/cd",
-      "serverless",
-      "serverless api routes",
-      "restful apis",
-      "api integrations",
-      "postgresql",
-      "nosql",
+    const databaseSet = new Set([
+      "postgresql", "firebase firestore", "firestore", "mongodb",
+      "mysql", "redis", "sqlite", "dynamodb", "nosql",
     ]);
+    const infraSet = new Set([
+      "docker", "git", "github", "github actions", "github actions (ci/cd)",
+      "ci/cd", "aws", "kubernetes", "terraform", "serverless",
+      "firebase", "firebase admin sdk",
+    ]);
+    const securitySet = new Set([
+      "rbac", "role-based access control", "role-based access control (rbac)",
+      "csp", "hsts", "secure headers", "secure headers (csp, hsts)",
+      "google recaptcha", "json-ld", "structured data",
+      "structured data (json-ld)", "sitemap/robots configuration",
+    ]);
+    const conceptSet = new Set([
+      "authentication flows", "real-time systems",
+      "performance profiling", "api contract validation",
+    ]);
+
     const key = keyword.trim().toLowerCase();
-    const bucket = languageSet.has(key)
-      ? "languages"
-      : frameworkSet.has(key)
-      ? "frameworks"
-      : toolSet.has(key)
-      ? "tools"
+    const bucket = frontendSet.has(key) ? "frontend"
+      : backendSet.has(key) ? "backend"
+      : databaseSet.has(key) ? "databases"
+      : infraSet.has(key) ? "infrastructure"
+      : securitySet.has(key) ? "security"
+      : conceptSet.has(key) ? "concepts"
       : "other";
 
-    // Add to added keywords list
     const newAddedKeywords = [...addedKeywords, keyword];
     setAddedKeywords(newAddedKeywords);
     
-    // Create the updated resume
     const updated = {
       ...tailoredResume,
       skills: {
         ...tailoredResume.skills,
         [bucket]: [...((tailoredResume.skills as Record<string, string[]> | undefined)?.[bucket] || []), keyword],
       },
-      // Move keyword from missing to matched
       matchedKeywords: [...(tailoredResume.matchedKeywords || []), keyword],
       missingKeywords: (tailoredResume.missingKeywords || []).filter(k => k !== keyword),
     };
     
-    // Update state
     setTailoredResume(updated);
-    
-    // Update sessionStorage with the updated values
     sessionStorage.setItem(`resume-${generationId}`, JSON.stringify(updated));
   };
 
@@ -360,30 +332,27 @@ export default function PreviewPage() {
   const handleRemoveKeyword = (keyword: string) => {
     if (!tailoredResume || !addedKeywords.includes(keyword)) return;
     
-    // Remove from added keywords list
     const newAddedKeywords = addedKeywords.filter(k => k !== keyword);
     setAddedKeywords(newAddedKeywords);
     
-    // Create the updated resume
     const removeFrom = (arr?: string[]) => (arr || []).filter(k => k !== keyword);
     const updated = {
       ...tailoredResume,
       skills: {
         ...tailoredResume.skills,
-        languages: removeFrom(tailoredResume.skills?.languages),
-        frameworks: removeFrom(tailoredResume.skills?.frameworks),
-        tools: removeFrom(tailoredResume.skills?.tools),
+        frontend: removeFrom(tailoredResume.skills?.frontend),
+        backend: removeFrom(tailoredResume.skills?.backend),
+        databases: removeFrom(tailoredResume.skills?.databases),
+        infrastructure: removeFrom(tailoredResume.skills?.infrastructure),
+        security: removeFrom(tailoredResume.skills?.security),
+        concepts: removeFrom(tailoredResume.skills?.concepts),
         other: removeFrom(tailoredResume.skills?.other),
       },
-      // Move keyword back from matched to missing
       matchedKeywords: (tailoredResume.matchedKeywords || []).filter(k => k !== keyword),
       missingKeywords: [...(tailoredResume.missingKeywords || []), keyword],
     };
     
-    // Update state
     setTailoredResume(updated);
-    
-    // Update sessionStorage with the updated values
     sessionStorage.setItem(`resume-${generationId}`, JSON.stringify(updated));
   };
 

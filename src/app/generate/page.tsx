@@ -28,7 +28,17 @@ import {
   HeaderAlignment,
   FontFamily,
 } from "@/types/resume";
-import { Loader2, Sparkles, ArrowLeft, ArrowRight, Check, Plus, RotateCcw, X, AlertTriangle, AlertCircle, UserCircle } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { buildCoverLetterFields } from "@/lib/cover-letter";
+import { Loader2, Sparkles, ArrowLeft, ArrowRight, Check, Plus, RotateCcw, X, AlertTriangle, AlertCircle, UserCircle, Pencil, Download, FileSignature } from "lucide-react";
+
+const PARSED_DRAFT_ID = "parsed-draft";
 
 type Step = "upload" | "analyze" | "generate";
 
@@ -48,6 +58,10 @@ export default function GeneratePage() {
   const [selectedTemplate] = useState<TemplateSlug>("classic-ats");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isDownloadingParsed, setIsDownloadingParsed] = useState(false);
+  const [isCoverLetterGenerating, setIsCoverLetterGenerating] = useState(false);
+  const [coverLetter, setCoverLetter] = useState<string | null>(null);
+  const [isCoverLetterExporting, setIsCoverLetterExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   // Analysis state - categorized keywords
@@ -59,6 +73,173 @@ export default function GeneratePage() {
 
   // Design options state
   const [designOptions, setDesignOptions] = useState<DesignOptions>(DEFAULT_DESIGN_OPTIONS);
+
+  // Restore edited parsed resume when returning from editor
+  useEffect(() => {
+    const draftResume = sessionStorage.getItem(`resume-${PARSED_DRAFT_ID}`);
+    const draftJobDescription = sessionStorage.getItem(`jobDescription-${PARSED_DRAFT_ID}`);
+    const draftDesignOptions = sessionStorage.getItem(`designOptions-${PARSED_DRAFT_ID}`);
+    if (draftResume) {
+      try {
+        const parsed = JSON.parse(draftResume);
+        setParsedResume(parsed);
+        setIsParsed(true);
+      } catch {
+        // ignore
+      }
+    }
+    if (draftJobDescription) {
+      setJobDescription(draftJobDescription);
+    }
+    if (draftDesignOptions) {
+      try {
+        setDesignOptions(JSON.parse(draftDesignOptions));
+      } catch {
+        // ignore
+      }
+    }
+  }, []);
+
+  const handleDownloadParsedPDF = async () => {
+    if (!parsedResume) return;
+    const asTailored: TailoredResume = {
+      ...parsedResume,
+      summary: parsedResume.summary || "",
+      skills: parsedResume.skills || {},
+      matchedKeywords: [],
+      missingKeywords: [],
+    };
+    setIsDownloadingParsed(true);
+    try {
+      const fileName = asTailored.contact?.name
+        ? `${asTailored.contact.name.replace(/\s+/g, "_")}_Parsed_Resume.pdf`
+        : "Parsed_Resume.pdf";
+      const response = await fetch("/api/export/pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          resume: asTailored,
+          designOptions,
+          template: selectedTemplate,
+          fileName,
+        }),
+      });
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.details || err.error || "Failed to generate PDF");
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Download parsed PDF error:", err);
+      alert(`There was an error generating the PDF: ${err instanceof Error ? err.message : "Unknown error"}`);
+    } finally {
+      setIsDownloadingParsed(false);
+    }
+  };
+
+  const handleGenerateCoverLetter = async () => {
+    if (!parsedResume) return;
+    setIsCoverLetterGenerating(true);
+    setError(null);
+    try {
+      const asTailored: TailoredResume = {
+        ...parsedResume,
+        summary: parsedResume.summary || "",
+        skills: parsedResume.skills || {},
+        matchedKeywords: [],
+        missingKeywords: [],
+      };
+      const response = await fetch("/api/cover-letter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          resume: asTailored,
+          jobDescription: jobDescription.trim() || undefined,
+        }),
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to generate cover letter");
+      }
+      const data = await response.json();
+      setCoverLetter(data.coverLetter);
+    } catch (err) {
+      console.error("Cover letter error:", err);
+      setError(err instanceof Error ? err.message : "Failed to generate cover letter");
+    } finally {
+      setIsCoverLetterGenerating(false);
+    }
+  };
+
+  const handleDownloadCoverLetterPDF = async () => {
+    if (!parsedResume || !coverLetter) return;
+    const asTailored: TailoredResume = {
+      ...parsedResume,
+      summary: parsedResume.summary || "",
+      skills: parsedResume.skills || {},
+      matchedKeywords: [],
+      missingKeywords: [],
+    };
+    const fields = buildCoverLetterFields({ resume: asTailored, coverLetter });
+    setIsCoverLetterExporting(true);
+    try {
+      const fileName = asTailored.contact?.name
+        ? `${asTailored.contact.name.replace(/\s+/g, "_")}_Cover_Letter.pdf`
+        : "Cover_Letter.pdf";
+      const response = await fetch("/api/cover-letter/pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          resume: asTailored,
+          coverLetter,
+          coverLetterFields: fields,
+          fileName,
+        }),
+      });
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.details || err.error || "Failed to generate PDF");
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Cover letter PDF error:", err);
+      alert(`There was an error: ${err instanceof Error ? err.message : "Unknown error"}`);
+    } finally {
+      setIsCoverLetterExporting(false);
+    }
+  };
+
+  const handleEditParsedResume = () => {
+    if (!parsedResume) return;
+    const asTailored: TailoredResume = {
+      ...parsedResume,
+      summary: parsedResume.summary || "",
+      skills: parsedResume.skills || {},
+      matchedKeywords: [],
+      missingKeywords: [],
+    };
+    sessionStorage.setItem(`resume-${PARSED_DRAFT_ID}`, JSON.stringify(asTailored));
+    sessionStorage.setItem(`template-${PARSED_DRAFT_ID}`, selectedTemplate);
+    sessionStorage.setItem(`designOptions-${PARSED_DRAFT_ID}`, JSON.stringify(designOptions));
+    sessionStorage.setItem(`jobDescription-${PARSED_DRAFT_ID}`, jobDescription);
+    router.push(`/editor/${PARSED_DRAFT_ID}`);
+  };
 
   const parseJsonSafely = async (response: Response) => {
     const text = await response.text();
@@ -76,6 +257,11 @@ export default function GeneratePage() {
     setError(null);
     setIsParsed(false);
     setParsedResume(null);
+    // Clear any previous parsed draft when uploading new file
+    sessionStorage.removeItem(`resume-${PARSED_DRAFT_ID}`);
+    sessionStorage.removeItem(`template-${PARSED_DRAFT_ID}`);
+    sessionStorage.removeItem(`designOptions-${PARSED_DRAFT_ID}`);
+    sessionStorage.removeItem(`jobDescription-${PARSED_DRAFT_ID}`);
     setParseWarnings([]);
     setNeedsReview(false);
 
@@ -115,6 +301,7 @@ export default function GeneratePage() {
     setFile(null);
     setIsParsed(false);
     setParsedResume(null);
+    setCoverLetter(null);
     setParseWarnings([]);
     setNeedsReview(false);
     setError(null);
@@ -338,6 +525,11 @@ export default function GeneratePage() {
         if (typeof window !== "undefined") {
           localStorage.setItem(`jobDescription-${data.generationId}`, jobDescription.trim());
         }
+        // Clear parsed draft since we've successfully tailored
+        sessionStorage.removeItem(`resume-${PARSED_DRAFT_ID}`);
+        sessionStorage.removeItem(`template-${PARSED_DRAFT_ID}`);
+        sessionStorage.removeItem(`designOptions-${PARSED_DRAFT_ID}`);
+        sessionStorage.removeItem(`jobDescription-${PARSED_DRAFT_ID}`);
         router.push(`/preview/${data.generationId}`);
       }
     } catch (err) {
@@ -363,9 +555,15 @@ export default function GeneratePage() {
     if (!skills) return [];
 
     const allSkills = [
-      ...(skills.technical || []),
+      ...(skills.frontend || []),
+      ...(skills.backend || []),
+      ...(skills.databases || []),
+      ...(skills.infrastructure || []),
+      ...(skills.security || []),
+      ...(skills.concepts || []),
       ...(skills.frameworks || []),
       ...(skills.tools || []),
+      ...(skills.technical || []),
       ...(skills.languages || []),
     ]
       .map((k) => k.trim())
@@ -569,9 +767,50 @@ export default function GeneratePage() {
 
             {/* Right Panel - Resume Preview */}
             <div className="bg-white rounded-lg border overflow-hidden">
-              {/* Template Selector */}
-              <div className="bg-white border-b px-4 py-3">
+              {/* Template Selector + Edit */}
+              <div className="bg-white border-b px-4 py-3 flex items-center justify-between">
                 <Label className="text-sm font-medium text-gray-700">Template: Classic ATS</Label>
+                {parsedAsTailored && (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleDownloadParsedPDF}
+                      disabled={isDownloadingParsed}
+                      className="flex items-center gap-2"
+                    >
+                      {isDownloadingParsed ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Download className="h-4 w-4" />
+                      )}
+                      Download PDF
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleGenerateCoverLetter}
+                      disabled={isCoverLetterGenerating}
+                      className="flex items-center gap-2"
+                    >
+                      {isCoverLetterGenerating ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <FileSignature className="h-4 w-4" />
+                      )}
+                      Generate Cover Letter
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleEditParsedResume}
+                      className="flex items-center gap-2"
+                    >
+                      <Pencil className="h-4 w-4" />
+                      Edit before tailoring
+                    </Button>
+                  </div>
+                )}
               </div>
               
               <div className="bg-gray-50 border-b px-4 py-2 flex items-center justify-between">
@@ -875,6 +1114,45 @@ export default function GeneratePage() {
                   <h3 className="font-medium text-gray-700">Original Resume</h3>
                   <p className="text-sm text-gray-500">This will be tailored with your selected keywords</p>
                 </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleDownloadParsedPDF}
+                    disabled={isDownloadingParsed}
+                    className="flex items-center gap-2"
+                  >
+                    {isDownloadingParsed ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Download className="h-4 w-4" />
+                    )}
+                    Download PDF
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleGenerateCoverLetter}
+                    disabled={isCoverLetterGenerating || jobDescription.trim().length < 30}
+                    className="flex items-center gap-2"
+                  >
+                    {isCoverLetterGenerating ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <FileSignature className="h-4 w-4" />
+                    )}
+                    Generate Cover Letter
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleEditParsedResume}
+                    className="flex items-center gap-2"
+                  >
+                    <Pencil className="h-4 w-4" />
+                    Edit before tailoring
+                  </Button>
+                </div>
               </div>
               
               <div className="min-h-[calc(100vh-250px)] bg-gray-100 p-4 overflow-x-auto">
@@ -895,6 +1173,38 @@ export default function GeneratePage() {
         )}
       </div>
       </div>
+
+      {/* Cover Letter Dialog */}
+      <Dialog open={!!coverLetter} onOpenChange={(open) => !open && setCoverLetter(null)}>
+        <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Cover Letter</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto text-sm text-gray-700 whitespace-pre-wrap pr-4">
+            {coverLetter}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setCoverLetter(null)}
+            >
+              Close
+            </Button>
+            <Button
+              onClick={handleDownloadCoverLetterPDF}
+              disabled={isCoverLetterExporting}
+              className="flex items-center gap-2"
+            >
+              {isCoverLetterExporting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
+              Download PDF
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </RequireAuth>
   );
 }

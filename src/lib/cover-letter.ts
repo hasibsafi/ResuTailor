@@ -30,7 +30,6 @@ export function buildCoverLetterFields(params: {
 }): CoverLetterFields {
   const { resume, coverLetter } = params;
   const contactLine = [
-    resume.contact.name,
     resume.contact.email,
     resume.contact.phone,
     resume.contact.location,

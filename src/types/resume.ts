@@ -79,9 +79,15 @@ export const CourseworkSchema = z.array(z.string());
 // Skills Schema
 export const SkillsSchema = z.object({
   technical: z.array(z.string()).optional(),
-  languages: z.array(z.string()).optional(),
-  frameworks: z.array(z.string()).optional(),
-  tools: z.array(z.string()).optional(),
+  languages: z.array(z.string()).optional(), // legacy
+  frontend: z.array(z.string()).optional(),
+  backend: z.array(z.string()).optional(),
+  databases: z.array(z.string()).optional(),
+  infrastructure: z.array(z.string()).optional(),
+  security: z.array(z.string()).optional(),
+  concepts: z.array(z.string()).optional(),
+  frameworks: z.array(z.string()).optional(), // legacy
+  tools: z.array(z.string()).optional(), // legacy
   soft: z.array(z.string()).optional(),
   other: z.array(z.string()).optional(),
 });
@@ -226,6 +232,12 @@ export interface DesignOptions {
   // Skill category custom names
   skillCategoryNames?: {
     technical?: string;
+    frontend?: string;
+    backend?: string;
+    databases?: string;
+    infrastructure?: string;
+    security?: string;
+    concepts?: string;
     frameworks?: string;
     tools?: string;
     languages?: string;

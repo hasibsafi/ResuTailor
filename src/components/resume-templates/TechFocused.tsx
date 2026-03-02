@@ -115,6 +115,25 @@ export default function TechFocused({ resume, accentColor = "purple", designOpti
     const familyValue = sectionFontFamilies[key] || designOptions.fontFamily;
     return FONT_FAMILIES.find(f => f.value === familyValue)?.css || fontFamily;
   };
+  const contactItems: React.ReactNode[] = [];
+  if (resume.contact.email) contactItems.push(<span key="email">{resume.contact.email}</span>);
+  if (resume.contact.phone) contactItems.push(<span key="phone">{resume.contact.phone}</span>);
+  if (resume.contact.location) contactItems.push(<span key="location">{resume.contact.location}</span>);
+  if (resume.contact.linkedin) {
+    contactItems.push(
+      <a key="linkedin" href={normalizeUrl(resume.contact.linkedin)} target="_blank" rel="noreferrer" className="underline">
+        LinkedIn
+      </a>
+    );
+  }
+  if (resume.contact.github) {
+    contactItems.push(
+      <a key="github" href={normalizeUrl(resume.contact.github)} target="_blank" rel="noreferrer" className="underline">
+        Github
+      </a>
+    );
+  }
+  contactItems.push(<span key="citizenship">U.S. Citizen</span>);
 
   // Section renderers
   const renderSummary = () => {
@@ -316,12 +335,15 @@ export default function TechFocused({ resume, accentColor = "purple", designOpti
         style={{ backgroundColor: accent.primary, padding: `1rem ${padding}` }}
       >
         <h1 className="font-bold uppercase tracking-wide" style={{ fontSize: `${nameFontSize}px` }}>{resume.contact.name}</h1>
-        <div className="mt-1 space-x-2" style={{ fontSize: `${smallFontSize}px` }}>
-          {resume.contact.email && <span>{resume.contact.email}</span>}
-          {resume.contact.phone && <span>| {resume.contact.phone}</span>}
-          {resume.contact.location && <span>| {resume.contact.location}</span>}
-          {resume.contact.linkedin && <span>| {resume.contact.linkedin}</span>}
-          {resume.contact.github && <span>| {resume.contact.github}</span>}
+        <div className="mt-1 flex flex-wrap items-center gap-y-2" style={{ fontSize: `${smallFontSize}px` }}>
+          {contactItems.flatMap((item, idx) =>
+            idx === 0
+              ? [<span key={`item-${idx}`}>{item}</span>]
+              : [
+                  <span key={`sep-${idx}`} aria-hidden="true" className="mx-5">•</span>,
+                  <span key={`item-${idx}`}>{item}</span>,
+                ]
+          )}
         </div>
       </header>
 

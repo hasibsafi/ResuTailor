@@ -1,5 +1,11 @@
 import OpenAI from "openai";
-import { TailoredResume, TailoredResumeSchema, ParsedResume, ParsedResumeSchema, ExtractedJobDescription } from "@/types/resume";
+import {
+  TailoredResume,
+  TailoredResumeSchema,
+  ParsedResume,
+  ParsedResumeSchema,
+  ExtractedJobDescription,
+} from "@/types/resume";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -15,117 +21,178 @@ const normalizeLocation = (value: unknown) => {
 
 const stripUrlScheme = (value: string) => value.replace(/^https?:\/\//i, "");
 
-const TAILORING_SYSTEM_PROMPT = `You are an elite professional resume writer with decades of experience crafting resumes that get candidates hired at top companies. Your job is to SIGNIFICANTLY REWRITE and tailor a resume to match a specific job description.
+const TAILORING_SYSTEM_PROMPT = `You are a senior-level resume strategist and hiring pipeline expert. Your job is to significantly rewrite and tailor a candidate’s resume to align precisely with a target job description while preserving truth and accuracy.
 
-CRITICAL RULES:
-1. NEVER invent new employers, job titles, degrees, or certifications that are not in the original resume.
-2. NEVER fabricate experience or qualifications.
-3. NEVER repeat same keyword all over the resume.
+Your output must improve clarity, impact, keyword alignment, and hiring signal strength — without fabricating experience.
 
-WRITING STYLE - SOUND HUMAN, NOT AI:
-- Write in natural, professional language that real humans use - NOT robotic AI-generated text
-- Vary sentence structure and length naturally
-- Use industry-appropriate terminology without being overly formal
-- Avoid buzzwords and clichés like "leverage", "synergy", "cutting-edge", "spearheaded"
-- Write like a confident professional describing their accomplishments, not a marketing brochure
+-------------------------------------------------------
+CORE INTEGRITY RULES (NON-NEGOTIABLE)
+-------------------------------------------------------
 
-ACHIEVEMENT ARCHITECTURE (TAR):
-Use this formula for every bullet point:
-(Action verb) + (Task) + (Result)
+1. NEVER invent employers, job titles, degrees, certifications, tools, metrics, or responsibilities not present in the parsedResume.
+2. NEVER fabricate metrics. You may improve clarity or rephrase, but not invent.
+3. NEVER exaggerate seniority or scope beyond what is supported.
+4. Preserve chronological structure and factual integrity.
 
-Action verbs (must start with one of these and try not use the same action verb more than once if possible.):
-Assembled, Built, Calculated, Computed, Designed, Devised, Maintained, Operated, Pinpointed, Programmed, Remodeled, Repaired, Solved
+-------------------------------------------------------
+ROLE ANALYSIS (THINK BEFORE WRITING)
+-------------------------------------------------------
 
-TASK:
-- What you built, improved, or delivered
-- Technologies, tools, or methods used (only if accurate)
-- Scope of ownership (feature, service, workflow, dataset, system)
-- Collaboration or integration points when relevant
+Before tailoring:
+- Identify the job type: Startup, Enterprise, Government Contractor, or Federal.
+- Identify required technologies, methodologies, and soft signals.
+- Identify primary risk concerns (e.g., scalability, compliance, security, delivery speed, documentation, collaboration).
+- Prioritize experience and projects that reduce perceived hiring risk for that role.
 
-RESULT:
-- Clear impact or outcome
-- Metrics are optional; use qualitative results if numbers are unknown
-- Never fabricate metrics or tools
+Then tailor tone and emphasis accordingly:
 
-Constraints:
-- 1–2 lines per bullet
-- No buzzwords without substance
-- No invented technologies, responsibilities, or outcomes
-- Each bullet must answer: “Why did this matter?”
-- Mirror keywords and phrasing from the target job description when truthful
+Startup:
+- Emphasize ownership, speed, autonomy, product thinking.
 
-Example:
-“Built a feature‑flagged onboarding flow that improved activation and reduced drop‑off.”
+Enterprise:
+- Emphasize reliability, collaboration, maintainability, structured delivery.
 
-BULLET POINT RULES:
-- Keep each position to a MAXIMUM of 4 bullet points - quality over quantity
-- Focus on the MOST RELEVANT achievements that align with the target job description
-- Keep bullets brief and impactful - 1-2 lines max, no fluff
-- Start each bullet with a required action verb (list above)
-- Prioritize business impact and outcomes over task descriptions
-- Write the bullets in the present tense for current jobs, and past tense for previous positions
+Government Contractor:
+- Emphasize security, compliance, documentation, structured SDLC, stability, predictability.
 
-PROJECT RULES:
-- Each project MUST include 3-4 bullet points in "highlights"
-- Do NOT leave projects with a single bullet
-- Do NOT use the same action verb more than once in a single project. 
-- Do NOT include metrics in project bullets
-- Use the project's description as the primary source for bullet content
-- Weave selected keywords naturally into project bullets when relevant
-- DO NOT include metrics and numbers in the project descirption. These are my projects and need to show
+Federal (USAJobs-style):
+- Emphasize scope, complexity, process adherence, documentation, measurable responsibility.
 
+-------------------------------------------------------
+BULLET WRITING STRATEGY
+-------------------------------------------------------
 
-SUMMARY WRITING:
-- The summary statement is an optional section, however you can utilize this section to tell how your skills and experience make you a fit for the position. A summary should be 3-5 lines long and highlight key skills related to the position
-- Write a brief, impactful summary of MAXIMUM 2-4 sentences (no more than 4 sentences)
-- Lead with years of experience and core expertise area
-- Sound confident and accomplished, not desperate or generic
-- Keep it concise - recruiters spend only seconds scanning summaries
-- Above all, be human and natural.
-- Do not use "known for" or "Brings" in the summary. You must rephrase it in a way that doesn't use "known for" in the summary.
+Each bullet must follow:
 
-KEYWORD INTEGRATION:
-- The user has pre-selected specific keywords in "selectedKeywords" that MUST ALL appear in the final resume
-- Weave keywords naturally into context - don't just list them
-- Every selectedKeyword MUST appear somewhere: summary, experience bullets, or skills section
+Strong Action Verb + Specific Task/Scope + Why It Mattered
 
-SKILLS SECTION RULES:
-- The skills section displays as a SINGLE comma-separated list of technical keywords
-- Put ALL technical skills (programming languages, frameworks, tools, technologies) into skills.technical, skills.frameworks, skills.tools, or skills.languages
-- DO NOT include soft skills (like "communication", "leadership", "teamwork", "problem-solving", "collaboration") in the skills section
-- SOFT SKILLS should be naturally woven into the summary instead
-- If a technical keyword doesn't fit in a specific category, add it to skills.other
+Rules:
+- Use varied, natural action verbs appropriate to context.
+- Avoid robotic repetition.
+- Focus on ownership and decision-making when truthful.
+- Avoid generic phrases that could apply to any engineer.
+- Metrics are encouraged when truthful but never fabricated.
+- If metrics are unavailable, describe qualitative impact clearly.
+- Keep each position to MAX 4 bullets.
+- Every bullet must answer: “Why did this matter?”
 
+-------------------------------------------------------
+PROJECT RULES
+-------------------------------------------------------
 
-OUTPUT REQUIREMENTS:
-- Output ONLY valid JSON matching the schema below. No explanations or markdown.
-- matchedKeywords: Should include ALL selectedKeywords plus any additional keywords you incorporated
-- missingKeywords: Only keywords NOT in selectedKeywords that could not be incorporated
+- Each project must contain 3–4 strong bullets.
+- Projects should reflect engineering depth, architecture decisions, or problem-solving.
+- Do NOT downplay projects — treat them as production-grade systems when appropriate.
+- Avoid fluff or vague feature descriptions.
+- Metrics allowed only if present in original data.
+- Avoid keyword stuffing.
 
-REQUIRED OUTPUT SCHEMA:
+-------------------------------------------------------
+SUMMARY RULES
+-------------------------------------------------------
+
+- 2–4 sentences maximum.
+- Lead with years of experience and specialization.
+- Position candidate as low-risk and aligned with the target role.
+- Avoid clichés, buzzwords, or marketing tone.
+- Avoid “known for” and “brings.”
+- Sound confident and precise.
+
+-------------------------------------------------------
+KEYWORD INTEGRATION
+-------------------------------------------------------
+
+The user provides selectedKeywords.
+
+Requirements:
+- Every selectedKeyword MUST appear somewhere in the resume.
+- Integrate keywords naturally into summary, experience, or skills.
+- Avoid unnatural repetition.
+- Do not invent context just to force a keyword.
+- If a keyword truly cannot fit without fabrication, list it in missingKeywords.
+
+-------------------------------------------------------
+SKILLS SECTION STRUCTURE
+-------------------------------------------------------
+
+Skills categories must remain:
+
+Frontend: TypeScript, JavaScript (ES6+), React, Next.js, Angular, HTML5, CSS3, Tailwind CSS, and other frontend technologies
+Backend: Node.js, Python, FastAPI, RESTful API development, and other backend technologies
+Databases: PostgreSQL, Firebase Firestore, MongoDB, MySQL, and other database technologies
+Infrastructure & DevOps: Docker, GitHub Actions (CI/CD), Git, AWS, Kubernetes, and other infra/devops tools
+Security & Web Standards: RBAC, secure headers (CSP, HSTS), Google reCAPTCHA, structured data (JSON-LD), sitemap/robots configuration, and other security/web standards
+Concepts: Authentication flows, real-time systems, performance profiling, API contract validation, and other technical concepts
+
+No soft skills in Skills section — integrate them into summary or bullets.
+
+-------------------------------------------------------
+ATS OPTIMIZATION
+-------------------------------------------------------
+
+- Mirror phrasing from the job description when truthful.
+- Use standard industry terminology.
+- Avoid unusual formatting or symbols.
+- Ensure important technical terms appear clearly (not buried in vague language).
+
+-------------------------------------------------------
+OUTPUT REQUIREMENTS
+-------------------------------------------------------
+
+Return ONLY valid JSON matching this schema:
+
 {
   "contact": { "name": "string", "email": "string", "phone": "string", "location": "string", "linkedin": "url", "github": "url" },
-  "summary": "Compelling 2-3 sentence professional summary with key achievements",
-  "experience": [{ "company": "string", "title": "string", "startDate": "string", "endDate": "string or omit if current", "location": "string", "highlights": ["Achievement-focused bullets using Result + Metric + Context"] }],
-  "education": [{ "institution": "string", "degree": "string", "field": "string", "endDate": "string" }],
-  "skills": { "technical": ["skills"], "frameworks": ["frameworks"], "tools": ["tools"], "languages": ["languages"], "soft": [], "other": ["remaining technical keywords"] },
-  "projects": [{ "name": "string", "description": "string", "technologies": ["tech"], "highlights": ["3-4 bullets"] }],
-  "certifications": [{ "name": "string", "issuer": "string", "date": "string" }],
-  "matchedKeywords": ["all selectedKeywords plus extras"],
-  "missingKeywords": ["only keywords NOT selected that couldn't be incorporated"]
+  "summary": "2-4 sentence professional summary",
+  "experience": [
+    {
+      "company": "string",
+      "title": "string",
+      "startDate": "string",
+      "endDate": "string or omit if current",
+      "location": "string",
+      "highlights": ["bullet 1", "bullet 2", "bullet 3", "bullet 4"]
+    }
+  ],
+  "education": [
+    { "institution": "string", "degree": "string", "field": "string", "endDate": "string" }
+  ],
+  "skills": {
+    "frontend": [],
+    "backend": [],
+    "databases": [],
+    "infrastructure": [],
+    "security": [],
+    "concepts": [],
+    "other": []
+  },
+  "projects": [
+    {
+      "name": "string",
+      "description": "brief 1-2 sentence overview",
+      "technologies": [],
+      "highlights": ["bullet 1", "bullet 2", "bullet 3", "bullet 4"]
+    }
+  ],
+  "certifications": [],
+  "matchedKeywords": [],
+  "missingKeywords": []
 }
 
-You will receive:
-- parsedResume: The candidate's existing resume data
-- jobDescription: Extracted signals from the target job description  
-- selectedKeywords: Keywords the user EXPLICITLY CHOSE - YOU MUST INCLUDE ALL OF THEM
+-------------------------------------------------------
 
-Your goal: Create the most compelling, ATS-optimized resume that will impress hiring managers and pass automated screening systems. Every selectedKeyword must appear in the final resume.`;
+You will receive:
+- parsedResume
+- jobDescription
+- selectedKeywords
+
+Your goal:
+Produce a sharply tailored, ATS-optimized, human-sounding resume that improves interview probability while maintaining complete factual integrity.`;
 
 export async function tailorResume(
   parsedResume: ParsedResume,
   jobDescription: ExtractedJobDescription,
-  selectedKeywords: string[] = []
+  selectedKeywords: string[] = [],
 ): Promise<TailoredResume> {
   const response = await openai.chat.completions.create({
     model: "gpt-5.2",
@@ -154,129 +221,118 @@ export async function tailorResume(
   }
 
   console.log("OpenAI tailor response:", content.substring(0, 500));
-  
+
   const parsed = JSON.parse(content);
-  
+
   // Sometimes OpenAI wraps the response in an outer object
   const resumeData = parsed.tailoredResume || parsed.resume || parsed;
-  
+
   // Normalize the tailored resume data
   const normalizedResume = {
     contact: resumeData.contact || parsedResume.contact,
     summary: resumeData.summary || parsedResume.summary || "",
-    experience: (resumeData.experience || parsedResume.experience || []).map((exp: Record<string, unknown>) => {
-      const result: Record<string, unknown> = {
-        company: exp.company || "Unknown Company",
-        title: exp.title || "Unknown Title",
-        location: normalizeLocation(exp.location),
-        startDate: exp.startDate || "Unknown",
-        highlights: exp.highlights || [],
-      };
-      if (exp.endDate && typeof exp.endDate === 'string') {
-        result.endDate = exp.endDate;
-      }
-      return result;
-    }),
-    education: (resumeData.education || parsedResume.education || []).map((edu: Record<string, unknown>) => {
-      const result: Record<string, unknown> = {
-        institution: edu.institution || "Unknown Institution",
-        degree: edu.degree || "Unknown Degree",
-        field: edu.field,
-        location: normalizeLocation(edu.location),
-        gpa: edu.gpa,
-        highlights: edu.highlights,
-      };
-      if (edu.startDate && typeof edu.startDate === 'string') {
-        result.startDate = edu.startDate;
-      }
-      if (edu.endDate && typeof edu.endDate === 'string') {
-        result.endDate = edu.endDate;
-      }
-      return result;
-    }),
+    experience: (resumeData.experience || parsedResume.experience || []).map(
+      (exp: Record<string, unknown>) => {
+        const result: Record<string, unknown> = {
+          company: exp.company || "Unknown Company",
+          title: exp.title || "Unknown Title",
+          location: normalizeLocation(exp.location),
+          startDate: exp.startDate || "Unknown",
+          highlights: exp.highlights || [],
+        };
+        if (exp.endDate && typeof exp.endDate === "string") {
+          result.endDate = exp.endDate;
+        }
+        return result;
+      },
+    ),
+    education: (resumeData.education || parsedResume.education || []).map(
+      (edu: Record<string, unknown>) => {
+        const result: Record<string, unknown> = {
+          institution: edu.institution || "Unknown Institution",
+          degree: edu.degree || "Unknown Degree",
+          field: edu.field,
+          location: normalizeLocation(edu.location),
+          gpa: edu.gpa,
+          highlights: edu.highlights,
+        };
+        if (edu.startDate && typeof edu.startDate === "string") {
+          result.startDate = edu.startDate;
+        }
+        if (edu.endDate && typeof edu.endDate === "string") {
+          result.endDate = edu.endDate;
+        }
+        return result;
+      },
+    ),
     skills: resumeData.skills || parsedResume.skills || {},
     projects: resumeData.projects || parsedResume.projects,
     certifications: resumeData.certifications || parsedResume.certifications,
     matchedKeywords: resumeData.matchedKeywords || [],
     missingKeywords: resumeData.missingKeywords || [],
   };
-  
+
   // POST-PROCESSING: Ensure ALL selectedKeywords are in the resume
   // Check if each selected keyword appears somewhere in the resume
   if (selectedKeywords.length > 0) {
     const resumeText = JSON.stringify(normalizedResume).toLowerCase();
     const missingFromResume: string[] = [];
-    
+
     for (const keyword of selectedKeywords) {
       // Check if keyword appears anywhere in the resume (case-insensitive)
       if (!resumeText.includes(keyword.toLowerCase())) {
         missingFromResume.push(keyword);
       }
     }
-    
-    // Add missing keywords to skills buckets
+
     if (missingFromResume.length > 0) {
-      console.log("Adding missing selectedKeywords to skills:", missingFromResume);
-      const skills = normalizedResume.skills as Record<string, string[] | undefined>;
-      skills.languages = skills.languages || [];
-      skills.frameworks = skills.frameworks || [];
-      skills.tools = skills.tools || [];
+      console.log(
+        "Adding missing selectedKeywords to skills:",
+        missingFromResume,
+      );
+      const skills = normalizedResume.skills as Record<
+        string,
+        string[] | undefined
+      >;
+      skills.frontend = skills.frontend || [];
+      skills.backend = skills.backend || [];
+      skills.databases = skills.databases || [];
+      skills.infrastructure = skills.infrastructure || [];
+      skills.security = skills.security || [];
+      skills.concepts = skills.concepts || [];
       skills.other = skills.other || [];
 
-      const languageSet = new Set([
-        "javascript",
-        "typescript",
-        "python",
-        "java",
-        "c",
-        "c++",
-        "c#",
-        "go",
-        "golang",
-        "ruby",
-        "php",
-        "swift",
-        "kotlin",
-        "rust",
-        "scala",
-        "sql",
-        "bash",
-        "shell",
+      const frontendSet = new Set([
+        "javascript", "typescript", "html", "css", "html5", "css3",
+        "jsx", "react", "next.js", "nextjs", "angular", "vue", "svelte",
+        "tailwind", "tailwind css", "redux", "es6", "es6+",
+        "javascript (es6+)",
       ]);
-      const frameworkSet = new Set([
-        "react",
-        "next.js",
-        "nextjs",
-        "angular",
-        "vue",
-        "svelte",
-        "tailwind",
-        "tailwind css",
-        "fastapi",
-        "django",
-        "flask",
-        "spring",
-        "node.js",
-        "nodejs",
-        "express",
-        "nestjs",
+      const backendSet = new Set([
+        "node.js", "nodejs", "python", "fastapi", "django", "flask",
+        "express", "nestjs", "spring", "java", "c", "c++", "c#",
+        "go", "golang", "ruby", "php", "swift", "kotlin", "rust",
+        "scala", "sql", "bash", "shell",
+        "restful api development", "restful apis", "api integrations",
       ]);
-      const toolSet = new Set([
-        "git",
-        "github",
-        "git workflow",
-        "docker",
-        "firebase",
-        "firestore",
-        "firebase admin sdk",
-        "google recaptcha",
-        "ci/cd",
-        "serverless",
-        "serverless api routes",
-        "restful apis",
-        "api integrations",
-        "postgresql",
-        "nosql",
+      const databaseSet = new Set([
+        "postgresql", "firebase firestore", "firestore", "mongodb",
+        "mysql", "redis", "sqlite", "dynamodb", "nosql",
+      ]);
+      const infraSet = new Set([
+        "docker", "git", "github", "github actions", "github actions (ci/cd)",
+        "ci/cd", "aws", "kubernetes", "terraform", "serverless",
+        "firebase", "firebase admin sdk",
+      ]);
+      const securitySet = new Set([
+        "rbac", "role-based access control", "role-based access control (rbac)",
+        "csp", "hsts", "secure headers", "secure headers (csp, hsts)",
+        "google recaptcha", "json-ld", "structured data",
+        "structured data (json-ld)", "sitemap/robots configuration",
+      ]);
+      const conceptSet = new Set([
+        "authentication flows", "real-time systems",
+        "performance profiling", "api contract validation",
       ]);
 
       const pushUnique = (arr: string[], value: string) => {
@@ -286,20 +342,33 @@ export async function tailorResume(
       missingFromResume.forEach((keyword) => {
         const key = keyword.trim().toLowerCase();
         if (!key) return;
-        if (languageSet.has(key)) pushUnique(skills.languages as string[], keyword);
-        else if (frameworkSet.has(key)) pushUnique(skills.frameworks as string[], keyword);
-        else if (toolSet.has(key)) pushUnique(skills.tools as string[], keyword);
+        if (frontendSet.has(key))
+          pushUnique(skills.frontend as string[], keyword);
+        else if (backendSet.has(key))
+          pushUnique(skills.backend as string[], keyword);
+        else if (databaseSet.has(key))
+          pushUnique(skills.databases as string[], keyword);
+        else if (infraSet.has(key))
+          pushUnique(skills.infrastructure as string[], keyword);
+        else if (securitySet.has(key))
+          pushUnique(skills.security as string[], keyword);
+        else if (conceptSet.has(key))
+          pushUnique(skills.concepts as string[], keyword);
         else pushUnique(skills.other as string[], keyword);
       });
     }
   }
-  
+
   // Clean up contact - remove empty strings and invalid URLs
   if (normalizedResume.contact) {
     const contact = normalizedResume.contact as Record<string, unknown>;
     // Remove empty strings
-    Object.keys(contact).forEach(key => {
-      if (contact[key] === "" || contact[key] === null || contact[key] === undefined) {
+    Object.keys(contact).forEach((key) => {
+      if (
+        contact[key] === "" ||
+        contact[key] === null ||
+        contact[key] === undefined
+      ) {
         delete contact[key];
       }
     });
@@ -308,17 +377,17 @@ export async function tailorResume(
       contact.name = "Unknown";
     }
     // Clean up and validate URLs
-    ['linkedin', 'github', 'website'].forEach(field => {
+    ["linkedin", "github", "website"].forEach((field) => {
       const value = contact[field];
-      if (value && typeof value === 'string') {
+      if (value && typeof value === "string") {
         let url = value.trim();
-        
+
         // If it's just a username, profile name, or placeholder text, remove it
-        if (!url.includes('.') || url.length < 10) {
+        if (!url.includes(".") || url.length < 10) {
           delete contact[field];
           return;
         }
-        
+
         // Only validate URLs that already include a scheme
         if (url.startsWith("http://") || url.startsWith("https://")) {
           try {
@@ -337,16 +406,24 @@ export async function tailorResume(
       }
     });
   }
-  
-  console.log("Normalized tailored resume:", JSON.stringify(normalizedResume, null, 2).substring(0, 1000));
-  
+
+  console.log(
+    "Normalized tailored resume:",
+    JSON.stringify(normalizedResume, null, 2).substring(0, 1000),
+  );
+
   // Validate with Zod schema
   const result = TailoredResumeSchema.safeParse(normalizedResume);
   if (!result.success) {
-    console.error("Tailor validation error:", JSON.stringify(result.error.issues, null, 2));
-    throw new Error(`Failed to tailor resume: ${result.error.issues.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')}`);
+    console.error(
+      "Tailor validation error:",
+      JSON.stringify(result.error.issues, null, 2),
+    );
+    throw new Error(
+      `Failed to tailor resume: ${result.error.issues.map((e) => `${e.path.join(".")}: ${e.message}`).join(", ")}`,
+    );
   }
-  
+
   return result.data;
 }
 
@@ -411,10 +488,12 @@ Output ONLY valid JSON matching this schema:
     }
   ],
   "skills": {
-    "technical": ["programming languages, technical skills"],
-    "languages": ["spoken languages like English, Spanish"],
-    "frameworks": ["frameworks like React, Django"],
-    "tools": ["tools like Git, Docker"],
+    "frontend": ["TypeScript, JavaScript (ES6+), React, Next.js, Angular, HTML5, CSS3, Tailwind CSS - frontend technologies"],
+    "backend": ["Node.js, Python, FastAPI, RESTful API development - backend technologies"],
+    "databases": ["PostgreSQL, Firebase Firestore, MongoDB - database technologies"],
+    "infrastructure": ["Docker, GitHub Actions (CI/CD), Git - infrastructure and devops tools"],
+    "security": ["RBAC, secure headers (CSP, HSTS), Google reCAPTCHA - security and web standards"],
+    "concepts": ["Authentication flows, real-time systems, performance profiling - technical concepts"],
     "soft": ["soft skills"],
     "other": ["any other skills"]
   },
@@ -446,11 +525,18 @@ export interface ParseResumeResult {
 }
 
 const extractContactFallback = (resumeText: string) => {
-  const lines = resumeText.split("\n").map((line) => line.trim()).filter(Boolean);
+  const lines = resumeText
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
   const emailMatch = resumeText.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
   const phoneMatch = resumeText.match(/(\+?\d[\d\s().-]{7,}\d)/);
-  const linkedinMatch = resumeText.match(/https?:\/\/(?:www\.)?linkedin\.com\/[^\s)]+/i) || resumeText.match(/linkedin\.com\/[^\s)]+/i);
-  const githubMatch = resumeText.match(/https?:\/\/(?:www\.)?github\.com\/[^\s)]+/i) || resumeText.match(/github\.com\/[^\s)]+/i);
+  const linkedinMatch =
+    resumeText.match(/https?:\/\/(?:www\.)?linkedin\.com\/[^\s)]+/i) ||
+    resumeText.match(/linkedin\.com\/[^\s)]+/i);
+  const githubMatch =
+    resumeText.match(/https?:\/\/(?:www\.)?github\.com\/[^\s)]+/i) ||
+    resumeText.match(/github\.com\/[^\s)]+/i);
 
   const nameCandidate = lines.find((line) => {
     if (line.length < 4) return false;
@@ -513,11 +599,16 @@ function mergeStringArrays(a?: string[], b?: string[]) {
   });
 }
 
-export async function parseResumeText(resumeText: string): Promise<ParseResumeResult> {
+export async function parseResumeText(
+  resumeText: string,
+): Promise<ParseResumeResult> {
   const fallbackContact = extractContactFallback(resumeText);
   const parsed = await parseChunkWithOpenAI(resumeText);
 
-  console.log("OpenAI resume parse response:", JSON.stringify(parsed).substring(0, 500));
+  console.log(
+    "OpenAI resume parse response:",
+    JSON.stringify(parsed).substring(0, 500),
+  );
 
   // Validate and provide defaults for optional arrays
   const normalizedResume: Record<string, any> = {
@@ -529,10 +620,13 @@ export async function parseResumeText(resumeText: string): Promise<ParseResumeRe
     projects: parsed.projects || [],
     certifications: parsed.certifications || [],
   };
-  
+
   const normalizeStringArray = (value: unknown): string[] => {
     if (!Array.isArray(value)) return [];
-    return value.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
+    return value.filter(
+      (item): item is string =>
+        typeof item === "string" && item.trim().length > 0,
+    );
   };
 
   const pruneNulls = (value: unknown): unknown => {
@@ -576,27 +670,31 @@ export async function parseResumeText(resumeText: string): Promise<ParseResumeRe
       delete contactRecord.location;
     }
   }
-  
+
   // Ensure experience entries have required fields and convert null to undefined
-  normalizedResume.experience = normalizedResume.experience.map((exp: Record<string, unknown>) => {
-    const result: Record<string, unknown> = {
-      company: exp.company || "Unknown Company",
-      title: exp.title || "Unknown Title",
-      location: normalizeLocation(exp.location),
-      startDate: exp.startDate || "Unknown",
-      highlights: exp.highlights || [],
-    };
-    // Only include endDate if it's a non-null string
-    if (exp.endDate && typeof exp.endDate === 'string') {
-      result.endDate = exp.endDate;
-    }
-    return result;
-  });
+  normalizedResume.experience = normalizedResume.experience.map(
+    (exp: Record<string, unknown>) => {
+      const result: Record<string, unknown> = {
+        company: exp.company || "Unknown Company",
+        title: exp.title || "Unknown Title",
+        location: normalizeLocation(exp.location),
+        startDate: exp.startDate || "Unknown",
+        highlights: exp.highlights || [],
+      };
+      // Only include endDate if it's a non-null string
+      if (exp.endDate && typeof exp.endDate === "string") {
+        result.endDate = exp.endDate;
+      }
+      return result;
+    },
+  );
 
   // Deduplicate identical experience entries (same company/title/highlights)
   const scoreExperience = (exp: Record<string, unknown>) => {
     const isKnown = (value?: unknown, unknownValue?: string) =>
-      typeof value === "string" && value.trim().length > 0 && value !== unknownValue;
+      typeof value === "string" &&
+      value.trim().length > 0 &&
+      value !== unknownValue;
     let score = 0;
     if (isKnown(exp.company, "Unknown Company")) score += 2;
     if (isKnown(exp.title, "Unknown Title")) score += 2;
@@ -626,67 +724,78 @@ export async function parseResumeText(resumeText: string): Promise<ParseResumeRe
   };
 
   normalizedResume.experience = dedupeExperience(normalizedResume.experience);
-  
+
   // Ensure education entries have required fields and convert null to undefined
-  normalizedResume.education = normalizedResume.education.map((edu: Record<string, unknown>) => {
-    const result: Record<string, unknown> = {
-      institution: edu.institution || "Unknown Institution",
-      degree: edu.degree || "Unknown Degree",
-      field: edu.field,
-      location: normalizeLocation(edu.location),
-      gpa: typeof edu.gpa === "number" ? String(edu.gpa) : edu.gpa,
-      highlights: edu.highlights,
-    };
-    // Only include dates if they're non-null strings
-    if (edu.startDate && typeof edu.startDate === 'string') {
-      result.startDate = edu.startDate;
-    }
-    if (edu.endDate && typeof edu.endDate === 'string') {
-      result.endDate = edu.endDate;
-    }
-    if (result.gpa === null || result.gpa === "") {
-      delete result.gpa;
-    }
-    return result;
-  });
-  
+  normalizedResume.education = normalizedResume.education.map(
+    (edu: Record<string, unknown>) => {
+      const result: Record<string, unknown> = {
+        institution: edu.institution || "Unknown Institution",
+        degree: edu.degree || "Unknown Degree",
+        field: edu.field,
+        location: normalizeLocation(edu.location),
+        gpa: typeof edu.gpa === "number" ? String(edu.gpa) : edu.gpa,
+        highlights: edu.highlights,
+      };
+      // Only include dates if they're non-null strings
+      if (edu.startDate && typeof edu.startDate === "string") {
+        result.startDate = edu.startDate;
+      }
+      if (edu.endDate && typeof edu.endDate === "string") {
+        result.endDate = edu.endDate;
+      }
+      if (result.gpa === null || result.gpa === "") {
+        delete result.gpa;
+      }
+      return result;
+    },
+  );
+
   // Normalize projects to avoid nulls and invalid types
-  normalizedResume.projects = (normalizedResume.projects || []).map((proj: Record<string, unknown>) => {
-    const result: Record<string, unknown> = {
-      name: typeof proj.name === "string" && proj.name.trim().length > 0 ? proj.name : "Untitled Project",
-      description: typeof proj.description === "string" ? proj.description : undefined,
-      url: proj.url,
-      technologies: normalizeStringArray(proj.technologies),
-      highlights: normalizeStringArray(proj.highlights),
-    };
-    return result;
-  });
+  normalizedResume.projects = (normalizedResume.projects || []).map(
+    (proj: Record<string, unknown>) => {
+      const result: Record<string, unknown> = {
+        name:
+          typeof proj.name === "string" && proj.name.trim().length > 0
+            ? proj.name
+            : "Untitled Project",
+        description:
+          typeof proj.description === "string" ? proj.description : undefined,
+        url: proj.url,
+        technologies: normalizeStringArray(proj.technologies),
+        highlights: normalizeStringArray(proj.highlights),
+      };
+      return result;
+    },
+  );
 
   // Clean up project URLs to avoid invalid URL validation errors
-  normalizedResume.projects = (normalizedResume.projects || []).map((proj: Record<string, unknown>) => {
-    const result: Record<string, unknown> = { ...proj };
-    if (result.url === null) {
-      delete result.url;
-      return result;
-    }
-    if (result.url && typeof result.url === "string") {
-      const url = result.url.trim();
-      if (!url) {
+  normalizedResume.projects = (normalizedResume.projects || []).map(
+    (proj: Record<string, unknown>) => {
+      const result: Record<string, unknown> = { ...proj };
+      if (result.url === null) {
         delete result.url;
         return result;
       }
-      // Preserve user-provided URL as-is (strip scheme for display consistency)
-      result.url = stripUrlScheme(url);
-    } else if (result.url) {
-      delete result.url;
-    }
-    return result;
-  });
+      if (result.url && typeof result.url === "string") {
+        const url = result.url.trim();
+        if (!url) {
+          delete result.url;
+          return result;
+        }
+        // Preserve user-provided URL as-is (strip scheme for display consistency)
+        result.url = stripUrlScheme(url);
+      } else if (result.url) {
+        delete result.url;
+      }
+      return result;
+    },
+  );
 
   // Ensure each project has 3-4 highlight bullets
   const ensureProjectHighlights = (proj: Record<string, unknown>) => {
     const highlights = normalizeStringArray(proj.highlights);
-    const description = typeof proj.description === "string" ? proj.description : "";
+    const description =
+      typeof proj.description === "string" ? proj.description : "";
     const sentences = description
       .split(/[.!?]+/g)
       .map((s) => s.trim())
@@ -705,15 +814,23 @@ export async function parseResumeText(resumeText: string): Promise<ParseResumeRe
     return merged;
   };
 
-  normalizedResume.projects = (normalizedResume.projects || []).map((proj: Record<string, unknown>) => ({
-    ...proj,
-    highlights: ensureProjectHighlights(proj),
-  }));
+  normalizedResume.projects = (normalizedResume.projects || []).map(
+    (proj: Record<string, unknown>) => ({
+      ...proj,
+      highlights: ensureProjectHighlights(proj),
+    }),
+  );
 
   // Normalize skills arrays
   normalizedResume.skills = {
     ...normalizedResume.skills,
     technical: normalizeStringArray(normalizedResume.skills?.technical),
+    frontend: normalizeStringArray(normalizedResume.skills?.frontend),
+    backend: normalizeStringArray(normalizedResume.skills?.backend),
+    databases: normalizeStringArray(normalizedResume.skills?.databases),
+    infrastructure: normalizeStringArray(normalizedResume.skills?.infrastructure),
+    security: normalizeStringArray(normalizedResume.skills?.security),
+    concepts: normalizeStringArray(normalizedResume.skills?.concepts),
     frameworks: normalizeStringArray(normalizedResume.skills?.frameworks),
     tools: normalizeStringArray(normalizedResume.skills?.tools),
     languages: normalizeStringArray(normalizedResume.skills?.languages),
@@ -721,136 +838,182 @@ export async function parseResumeText(resumeText: string): Promise<ParseResumeRe
     other: normalizeStringArray(normalizedResume.skills?.other),
   };
 
-  // Re-bucket skills so Languages only contains actual languages
-  const languageSet = new Set([
-    "javascript",
-    "typescript",
-    "python",
-    "java",
-    "c",
-    "c++",
-    "c#",
-    "go",
-    "golang",
-    "ruby",
-    "php",
-    "swift",
-    "kotlin",
-    "rust",
-    "scala",
-    "sql",
-    "bash",
-    "shell",
+  // Re-bucket ALL skills into 6 categories
+  const frontendSet = new Set([
+    "javascript", "typescript", "html", "css", "html5", "css3",
+    "jsx", "react", "next.js", "nextjs", "angular", "vue", "svelte",
+    "tailwind", "tailwind css", "redux", "es6", "es6+",
+    "javascript (es6+)",
   ]);
-  const frameworkSet = new Set([
-    "react",
-    "next.js",
-    "nextjs",
-    "angular",
-    "vue",
-    "svelte",
-    "tailwind",
-    "tailwind css",
-    "fastapi",
-    "django",
-    "flask",
-    "spring",
-    "node.js",
-    "nodejs",
-    "express",
-    "nestjs",
+  const backendSet = new Set([
+    "node.js", "nodejs", "python", "fastapi", "django", "flask",
+    "express", "nestjs", "spring", "java", "c", "c++", "c#",
+    "go", "golang", "ruby", "php", "swift", "kotlin", "rust",
+    "scala", "sql", "bash", "shell",
+    "restful api development", "restful apis", "api integrations",
   ]);
-  const toolSet = new Set([
-    "git",
-    "github",
-    "git workflow",
-    "docker",
-    "firebase",
-    "firestore",
-    "firebase admin sdk",
-    "google recaptcha",
-    "ci/cd",
-    "serverless",
-    "serverless api routes",
-    "restful apis",
-    "api integrations",
-    "postgresql",
-    "nosql",
-    "sql",
+  const databaseSet = new Set([
+    "postgresql", "firebase firestore", "firestore", "mongodb",
+    "mysql", "redis", "sqlite", "dynamodb", "nosql",
+  ]);
+  const infraSet = new Set([
+    "docker", "git", "github", "github actions", "github actions (ci/cd)",
+    "ci/cd", "aws", "kubernetes", "terraform", "serverless",
+    "firebase", "firebase admin sdk",
+  ]);
+  const securitySet = new Set([
+    "rbac", "role-based access control", "role-based access control (rbac)",
+    "csp", "hsts", "secure headers", "secure headers (csp, hsts)",
+    "google recaptcha", "json-ld", "structured data",
+    "structured data (json-ld)", "sitemap/robots configuration",
+  ]);
+  const conceptSet = new Set([
+    "authentication flows", "real-time systems",
+    "performance profiling", "api contract validation",
   ]);
 
   const bucketSkill = (value: string) => {
     const key = value.trim().toLowerCase();
     if (!key) return "other";
-    if (languageSet.has(key)) return "languages";
-    if (frameworkSet.has(key)) return "frameworks";
-    if (toolSet.has(key)) return "tools";
+    if (frontendSet.has(key)) return "frontend";
+    if (backendSet.has(key)) return "backend";
+    if (databaseSet.has(key)) return "databases";
+    if (infraSet.has(key)) return "infrastructure";
+    if (securitySet.has(key)) return "security";
+    if (conceptSet.has(key)) return "concepts";
     return "other";
   };
 
-  const combined = [
-    ...normalizedResume.skills.languages,
-    ...normalizedResume.skills.technical,
+  // Collect ALL skills from every source and re-bucket
+  const allSkillItems = [
+    ...(normalizedResume.skills.frontend || []),
+    ...(normalizedResume.skills.backend || []),
+    ...(normalizedResume.skills.databases || []),
+    ...(normalizedResume.skills.infrastructure || []),
+    ...(normalizedResume.skills.security || []),
+    ...(normalizedResume.skills.concepts || []),
+    ...(normalizedResume.skills.frameworks || []),
+    ...(normalizedResume.skills.tools || []),
+    ...(normalizedResume.skills.languages || []),
+    ...(normalizedResume.skills.technical || []),
+    ...(normalizedResume.skills.other || []),
   ];
 
-  if (combined.length > 0) {
-    const nextLanguages = new Set(normalizedResume.skills.languages);
-    const nextFrameworks = new Set(normalizedResume.skills.frameworks);
-    const nextTools = new Set(normalizedResume.skills.tools);
-    const nextOther = new Set(normalizedResume.skills.other);
+  const nextFrontend = new Set<string>();
+  const nextBackend = new Set<string>();
+  const nextDatabases = new Set<string>();
+  const nextInfra = new Set<string>();
+  const nextSecurity = new Set<string>();
+  const nextConcepts = new Set<string>();
+  const nextOther = new Set<string>();
 
-    combined.forEach((item) => {
-      const bucket = bucketSkill(item);
-      if (bucket === "languages") nextLanguages.add(item);
-      else if (bucket === "frameworks") nextFrameworks.add(item);
-      else if (bucket === "tools") nextTools.add(item);
-      else nextOther.add(item);
-    });
+  allSkillItems.forEach((item) => {
+    const bucket = bucketSkill(item);
+    if (bucket === "frontend") nextFrontend.add(item);
+    else if (bucket === "backend") nextBackend.add(item);
+    else if (bucket === "databases") nextDatabases.add(item);
+    else if (bucket === "infrastructure") nextInfra.add(item);
+    else if (bucket === "security") nextSecurity.add(item);
+    else if (bucket === "concepts") nextConcepts.add(item);
+    else nextOther.add(item);
+  });
 
-    normalizedResume.skills.languages = Array.from(nextLanguages);
-    normalizedResume.skills.frameworks = Array.from(nextFrameworks);
-    normalizedResume.skills.tools = Array.from(nextTools);
-    normalizedResume.skills.other = Array.from(nextOther);
-    normalizedResume.skills.technical = [];
-  }
+  normalizedResume.skills.frontend = Array.from(nextFrontend);
+  normalizedResume.skills.backend = Array.from(nextBackend);
+  normalizedResume.skills.databases = Array.from(nextDatabases);
+  normalizedResume.skills.infrastructure = Array.from(nextInfra);
+  normalizedResume.skills.security = Array.from(nextSecurity);
+  normalizedResume.skills.concepts = Array.from(nextConcepts);
+  normalizedResume.skills.other = Array.from(nextOther);
+  normalizedResume.skills.frameworks = [];
+  normalizedResume.skills.tools = [];
+  normalizedResume.skills.technical = [];
+  normalizedResume.skills.languages = [];
 
-  // Always include core languages in the Languages row
-  const mustHaveLanguages = ["TypeScript", "SQL", "Python", "JavaScript", "C++", "C"];
-  mustHaveLanguages.forEach((lang) => {
-    if (!normalizedResume.skills.languages.includes(lang)) {
-      normalizedResume.skills.languages.push(lang);
+  // Include default frontend skills
+  const defaultFrontend = ["TypeScript", "JavaScript (ES6+)", "React", "Next.js", "Angular", "HTML5", "CSS3", "Tailwind CSS"];
+  defaultFrontend.forEach((skill) => {
+    if (!normalizedResume.skills.frontend.some((s: string) => s.toLowerCase() === skill.toLowerCase())) {
+      normalizedResume.skills.frontend.push(skill);
+    }
+  });
+
+  // Include default backend skills
+  const defaultBackend = ["Node.js", "Python", "FastAPI", "RESTful API development"];
+  defaultBackend.forEach((skill) => {
+    if (!normalizedResume.skills.backend.some((s: string) => s.toLowerCase() === skill.toLowerCase())) {
+      normalizedResume.skills.backend.push(skill);
+    }
+  });
+
+  // Include default database skills
+  const defaultDatabases = ["PostgreSQL", "Firebase Firestore"];
+  defaultDatabases.forEach((skill) => {
+    if (!normalizedResume.skills.databases.some((s: string) => s.toLowerCase() === skill.toLowerCase())) {
+      normalizedResume.skills.databases.push(skill);
+    }
+  });
+
+  // Include default infrastructure skills
+  const defaultInfra = ["Docker", "GitHub Actions (CI/CD)", "Git"];
+  defaultInfra.forEach((skill) => {
+    if (!normalizedResume.skills.infrastructure.some((s: string) => s.toLowerCase() === skill.toLowerCase())) {
+      normalizedResume.skills.infrastructure.push(skill);
+    }
+  });
+
+  // Include default security skills
+  const defaultSecurity = ["Role-based access control (RBAC)", "Secure headers (CSP, HSTS)", "Google reCAPTCHA", "Structured data (JSON-LD)", "Sitemap/robots configuration"];
+  defaultSecurity.forEach((skill) => {
+    if (!normalizedResume.skills.security.some((s: string) => s.toLowerCase() === skill.toLowerCase())) {
+      normalizedResume.skills.security.push(skill);
+    }
+  });
+
+  // Include default concepts
+  const defaultConcepts = ["Authentication flows", "Real-time systems", "Performance profiling", "API contract validation"];
+  defaultConcepts.forEach((skill) => {
+    if (!normalizedResume.skills.concepts.some((s: string) => s.toLowerCase() === skill.toLowerCase())) {
+      normalizedResume.skills.concepts.push(skill);
     }
   });
 
   // Drop nulls/empty strings throughout
   const pruned = pruneNulls(normalizedResume) as typeof normalizedResume;
-  
+
   // Re-assign after pruning
   Object.assign(normalizedResume, pruned);
-  
-  console.log("Normalized resume:", JSON.stringify(normalizedResume, null, 2).substring(0, 1000));
-  
+
+  console.log(
+    "Normalized resume:",
+    JSON.stringify(normalizedResume, null, 2).substring(0, 1000),
+  );
+
   // Clean up contact - remove empty strings and invalid URLs
   if (normalizedResume.contact) {
     const contact = normalizedResume.contact as Record<string, unknown>;
     // Remove empty strings
-    Object.keys(contact).forEach(key => {
-      if (contact[key] === "" || contact[key] === null || contact[key] === undefined) {
+    Object.keys(contact).forEach((key) => {
+      if (
+        contact[key] === "" ||
+        contact[key] === null ||
+        contact[key] === undefined
+      ) {
         delete contact[key];
       }
     });
     // Clean up and validate URLs
-    ['linkedin', 'github', 'website'].forEach(field => {
+    ["linkedin", "github", "website"].forEach((field) => {
       const value = contact[field];
-      if (value && typeof value === 'string') {
+      if (value && typeof value === "string") {
         let url = value.trim();
-        
+
         // If it's just a username, profile name, or placeholder text, remove it
-        if (!url.includes('.') || url.length < 10) {
+        if (!url.includes(".") || url.length < 10) {
           delete contact[field];
           return;
         }
-        
+
         // Only validate URLs that already include a scheme
         if (url.startsWith("http://") || url.startsWith("https://")) {
           try {
@@ -869,34 +1032,67 @@ export async function parseResumeText(resumeText: string): Promise<ParseResumeRe
       }
     });
   }
-  
+
   // Extract warnings from the parsed data
   const parseWarnings: string[] = parsed._parseWarnings || [];
   delete normalizedResume._parseWarnings;
-  
+
   // Check for signs that parsing may be incomplete
-  const hasContact = Boolean(normalizedResume.contact && normalizedResume.contact.name && normalizedResume.contact.name !== "Unknown");
-  const hasSummary = Boolean(normalizedResume.summary && String(normalizedResume.summary).trim().length > 0);
-  const hasExperience = Array.isArray(normalizedResume.experience) && normalizedResume.experience.length > 0;
-  const hasEducation = Array.isArray(normalizedResume.education) && normalizedResume.education.length > 0;
-  const hasSkills = Boolean(normalizedResume.skills && Object.values(normalizedResume.skills).some((val) => Array.isArray(val) && val.length > 0));
-  const hasProjects = Array.isArray(normalizedResume.projects) && normalizedResume.projects.length > 0;
-  const hasCertifications = Array.isArray(normalizedResume.certifications) && normalizedResume.certifications.length > 0;
+  const hasContact = Boolean(
+    normalizedResume.contact &&
+    normalizedResume.contact.name &&
+    normalizedResume.contact.name !== "Unknown",
+  );
+  const hasSummary = Boolean(
+    normalizedResume.summary &&
+    String(normalizedResume.summary).trim().length > 0,
+  );
+  const hasExperience =
+    Array.isArray(normalizedResume.experience) &&
+    normalizedResume.experience.length > 0;
+  const hasEducation =
+    Array.isArray(normalizedResume.education) &&
+    normalizedResume.education.length > 0;
+  const hasSkills = Boolean(
+    normalizedResume.skills &&
+    Object.values(normalizedResume.skills).some(
+      (val) => Array.isArray(val) && val.length > 0,
+    ),
+  );
+  const hasProjects =
+    Array.isArray(normalizedResume.projects) &&
+    normalizedResume.projects.length > 0;
+  const hasCertifications =
+    Array.isArray(normalizedResume.certifications) &&
+    normalizedResume.certifications.length > 0;
 
   const shouldKeepWarning = (warning: string) => {
     const normalized = warning.toLowerCase();
     if (hasContact && normalized.includes("no contact")) return false;
     if (hasSummary && normalized.includes("no summary")) return false;
-    if (hasExperience && normalized.includes("no work experience")) return false;
+    if (hasExperience && normalized.includes("no work experience"))
+      return false;
     if (hasEducation && normalized.includes("no education")) return false;
     if (hasSkills && normalized.includes("no skills")) return false;
     if (hasProjects && normalized.includes("no projects")) return false;
-    if (hasCertifications && normalized.includes("no certifications")) return false;
-    if ((hasSummary || hasExperience || hasEducation || hasSkills || hasProjects || hasCertifications) && normalized.includes("only contact")) {
+    if (hasCertifications && normalized.includes("no certifications"))
+      return false;
+    if (
+      (hasSummary ||
+        hasExperience ||
+        hasEducation ||
+        hasSkills ||
+        hasProjects ||
+        hasCertifications) &&
+      normalized.includes("only contact")
+    ) {
       return false;
     }
     if (hasContact && normalized.includes("name not found")) return false;
-    if (normalized.includes("no explicit") && (hasSkills || hasProjects || hasExperience || hasEducation)) {
+    if (
+      normalized.includes("no explicit") &&
+      (hasSkills || hasProjects || hasExperience || hasEducation)
+    ) {
       return false;
     }
     return true;
@@ -914,38 +1110,63 @@ export async function parseResumeText(resumeText: string): Promise<ParseResumeRe
     warnings.push(trimmed);
   }
   let needsReview = false;
-  
+
   if (normalizedResume.contact?.name === "Unknown") {
     warnings.push("Could not find your name - please add it in the editor");
     needsReview = true;
   }
-  if (!normalizedResume.experience || normalizedResume.experience.length === 0) {
-    warnings.push("No work experience found - add it in the editor if applicable");
+  if (
+    !normalizedResume.experience ||
+    normalizedResume.experience.length === 0
+  ) {
+    warnings.push(
+      "No work experience found - add it in the editor if applicable",
+    );
     needsReview = true;
   }
   if (!normalizedResume.education || normalizedResume.education.length === 0) {
     warnings.push("No education found - add it in the editor if applicable");
     needsReview = true;
   }
-  if (normalizedResume.experience?.some((e: Record<string, unknown>) => e.company === "Unknown Company" || e.title === "Unknown Title")) {
-    warnings.push("Some job entries may be missing company or title information");
+  if (
+    normalizedResume.experience?.some(
+      (e: Record<string, unknown>) =>
+        e.company === "Unknown Company" || e.title === "Unknown Title",
+    )
+  ) {
+    warnings.push(
+      "Some job entries may be missing company or title information",
+    );
     needsReview = true;
   }
-  if (normalizedResume.education?.some((e: Record<string, unknown>) => e.institution === "Unknown Institution" || e.degree === "Unknown Degree")) {
-    warnings.push("Some education entries may be missing institution or degree information");
+  if (
+    normalizedResume.education?.some(
+      (e: Record<string, unknown>) =>
+        e.institution === "Unknown Institution" ||
+        e.degree === "Unknown Degree",
+    )
+  ) {
+    warnings.push(
+      "Some education entries may be missing institution or degree information",
+    );
     needsReview = true;
   }
-  
+
   // Validate against schema - but be lenient
   const result = ParsedResumeSchema.safeParse(normalizedResume);
   if (!result.success) {
-    console.error("Resume parsing validation error:", JSON.stringify(result.error.issues, null, 2));
+    console.error(
+      "Resume parsing validation error:",
+      JSON.stringify(result.error.issues, null, 2),
+    );
     // Instead of throwing, try to fix the issues and continue
-    result.error.issues.forEach(issue => {
-      warnings.push(`Parsing issue: ${issue.path.join('.')} - ${issue.message}`);
+    result.error.issues.forEach((issue) => {
+      warnings.push(
+        `Parsing issue: ${issue.path.join(".")} - ${issue.message}`,
+      );
     });
     needsReview = true;
-    
+
     // Return a minimal valid resume structure
     const fallbackResume: ParsedResume = {
       contact: { name: normalizedResume.contact?.name || "Unknown" },
@@ -956,14 +1177,14 @@ export async function parseResumeText(resumeText: string): Promise<ParseResumeRe
       projects: [],
       certifications: [],
     };
-    
+
     return {
       resume: fallbackResume,
       warnings,
       needsReview: true,
     };
   }
-  
+
   return {
     resume: result.data,
     warnings,
@@ -986,7 +1207,9 @@ Output ONLY valid JSON:
 
 Focus on actionable signals that help tailor a resume.`;
 
-export async function extractJobDescription(jdText: string): Promise<ExtractedJobDescription> {
+export async function extractJobDescription(
+  jdText: string,
+): Promise<ExtractedJobDescription> {
   const response = await openai.chat.completions.create({
     model: "gpt-4.1",
     messages: [
@@ -1014,13 +1237,14 @@ export async function extractJobDescription(jdText: string): Promise<ExtractedJo
 
 export { openai };
 
-const COVER_LETTER_PROMPT = `You are a professional career coach and writer. Write a concise, tailored cover letter using the resume data and job description provided.
+const COVER_LETTER_PROMPT = `You are a professional career coach and writer. Write a concise cover letter using the resume data provided.
 
 RULES:
 - Keep it to 3-5 short paragraphs.
 - Use a professional but warm tone.
 - Do NOT invent experience, employers, or qualifications.
-- Align the content with the job description and the candidate's real experience.
+- When a job description is provided, tailor the letter to align with it and the candidate's real experience.
+- When no job description is provided, write a general cover letter that highlights the candidate's key strengths, skills, and experience from their resume.
 - Avoid clichés and overly flowery language.
 - Output ONLY valid JSON with the schema below.
 
@@ -1032,7 +1256,7 @@ OUTPUT SCHEMA:
 
 export async function generateCoverLetter(
   tailoredResume: TailoredResume,
-  jobDescription: string
+  jobDescription: string,
 ): Promise<string> {
   const response = await openai.chat.completions.create({
     model: "gpt-4.1",
@@ -1045,7 +1269,9 @@ export async function generateCoverLetter(
         role: "user",
         content: JSON.stringify({
           resume: tailoredResume,
-          jobDescription,
+          jobDescription:
+            jobDescription ||
+            "(No specific job description - write a general cover letter highlighting the candidate's strengths and experience.)",
         }),
       },
     ],
