@@ -133,7 +133,9 @@ export default function TechFocused({ resume, accentColor = "purple", designOpti
       </a>
     );
   }
-  contactItems.push(<span key="citizenship">U.S. Citizen</span>);
+  if (resume.contact.visaStatus) {
+    contactItems.push(<span key="visaStatus">{resume.contact.visaStatus}</span>);
+  }
 
   // Section renderers
   const renderSummary = () => {

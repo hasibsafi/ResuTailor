@@ -20,6 +20,7 @@ export const ContactSchema = z.object({
   email: z.string().email().optional(),
   phone: z.string().optional(),
   location: z.string().optional(),
+  visaStatus: z.string().optional(),
   linkedin: z.string().refine(isUrlOrDomain, "Invalid URL").optional(),
   github: z.string().refine(isUrlOrDomain, "Invalid URL").optional(),
   website: z.string().refine(isUrlOrDomain, "Invalid URL").optional(),

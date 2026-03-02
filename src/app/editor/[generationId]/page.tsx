@@ -1964,6 +1964,15 @@ export default function EditorPage() {
                     />
                   </div>
                   <div>
+                    <Label htmlFor="visaStatus" className="text-sm">Visa Status</Label>
+                    <Input
+                      id="visaStatus"
+                      value={resume.contact.visaStatus || ""}
+                      onChange={(e) => updateContact("visaStatus", e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
                     <Label htmlFor="linkedin" className="text-sm">LinkedIn URL</Label>
                     <Input
                       id="linkedin"

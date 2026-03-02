@@ -123,7 +123,9 @@ export default function ExecutiveImpact({
       </a>
     );
   }
-  contactItems.push(<span key="citizenship">U.S. Citizen</span>);
+  if (resume.contact.visaStatus) {
+    contactItems.push(<span key="visaStatus">{resume.contact.visaStatus}</span>);
+  }
 
   return (
     <div

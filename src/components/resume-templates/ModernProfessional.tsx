@@ -100,7 +100,9 @@ export default function ModernProfessional({ resume, designOptions = DEFAULT_DES
       </a>
     );
   }
-  contactItems.push(<span key="citizenship">U.S. Citizen</span>);
+  if (resume.contact.visaStatus) {
+    contactItems.push(<span key="visaStatus">{resume.contact.visaStatus}</span>);
+  }
 
   // Section renderers
   const renderSummary = () => {

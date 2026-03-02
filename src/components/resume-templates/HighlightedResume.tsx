@@ -62,7 +62,9 @@ export default function HighlightedResume({ resume, keywords }: HighlightedResum
       </a>
     );
   }
-  contactItems.push(<span key="citizenship">U.S. Citizen</span>);
+  if (resume.contact.visaStatus) {
+    contactItems.push(<span key="visaStatus">{resume.contact.visaStatus}</span>);
+  }
   return (
     <div className="p-8 max-w-[8.5in] mx-auto bg-white font-sans text-gray-800 print:p-0">
       {/* Header */}

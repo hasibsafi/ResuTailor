@@ -105,7 +105,6 @@ export default function ClassicATS({
   const contactLinkedinSize = sectionFonts.contactInfo || contactInfoSize;
   const contactGithubSize = sectionFonts.contactInfo || contactInfoSize;
   const contactWebsiteSize = sectionFonts.contactInfo || contactInfoSize;
-  const contactCitizenshipSize = sectionFonts.contactInfo || contactInfoSize;
   const projectSectionTitleSize =
     sectionFonts.projectSectionTitle || defaultSectionTitleSize;
   const projectTitleSize = sectionFonts.projectTitle || subheadingSize;
@@ -229,17 +228,19 @@ export default function ClassicATS({
       </span>,
     );
   }
-  contactItems.push(
-    <span
-      key="citizenship"
-      style={{
-        fontSize: `${contactCitizenshipSize}px`,
-        fontFamily: getFontFamily("contactInfo"),
-      }}
-    >
-      U.S. Citizen
-    </span>,
-  );
+  if (resume.contact.visaStatus) {
+    contactItems.push(
+      <span
+        key="visaStatus"
+        style={{
+          fontSize: `${contactInfoSize}px`,
+          fontFamily: getFontFamily("contactInfo"),
+        }}
+      >
+        {resume.contact.visaStatus}
+      </span>,
+    );
+  }
 
   // Get section order with defaults (append missing new sections)
   const defaultSectionOrder = [

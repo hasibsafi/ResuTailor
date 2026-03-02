@@ -35,6 +35,7 @@ export function buildCoverLetterFields(params: {
     resume.contact.location,
     resume.contact.linkedin,
     resume.contact.github,
+    resume.contact.visaStatus,
   ]
     .filter(Boolean)
     .join(" · ");

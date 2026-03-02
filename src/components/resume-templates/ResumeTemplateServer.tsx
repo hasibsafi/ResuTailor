@@ -104,7 +104,9 @@ export function generateResumeHTML({
       const websiteUrl = toHref(resume.contact.website);
       items.push(`<span style="font-size: ${contactWebsiteSize}px; font-family: ${getFontFamily('contactInfo')};"><a href="${websiteUrl}" target="_blank" rel="noreferrer" style="text-decoration: none; color: inherit;">${resume.contact.website}</a></span>`);
     }
-    items.push(`<span style="font-size: ${contactInfoSize}px; font-family: ${getFontFamily('contactInfo')};">U.S. Citizen</span>`);
+    if (resume.contact.visaStatus) {
+      items.push(`<span style="font-size: ${contactInfoSize}px; font-family: ${getFontFamily('contactInfo')};">${resume.contact.visaStatus}</span>`);
+    }
     const withSeparators = items.flatMap((item, idx) =>
       idx === 0
         ? [`<span>${item}</span>`]
