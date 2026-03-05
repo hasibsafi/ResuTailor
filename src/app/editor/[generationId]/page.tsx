@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ResumeTemplate } from "@/components/resume-templates";
 import { PagedResumePreview } from "@/components/PagedResumePreview";
+import { AiBulletRewriter } from "@/components/AiBulletRewriter";
+import { BoldToggleButton } from "@/components/BoldToggleButton";
 import { RequireAuth } from "@/components/auth/RequireAuth";
 import { 
   TailoredResume, 
@@ -275,11 +277,14 @@ export default function EditorPage() {
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateSlug>("classic-ats");
   const [designOptions, setDesignOptions] = useState<DesignOptions>(DEFAULT_DESIGN_OPTIONS);
   const [projectTechInputs, setProjectTechInputs] = useState<Record<number, string>>({});
+  const [jobDescription, setJobDescription] = useState<string>("");
+  const textareaRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
 
   useEffect(() => {
     const storedResume = sessionStorage.getItem(`resume-${generationId}`);
     const storedTemplate = sessionStorage.getItem(`template-${generationId}`);
     const storedDesignOptions = sessionStorage.getItem(`designOptions-${generationId}`);
+    const storedJobDescription = sessionStorage.getItem(`jobDescription-${generationId}`);
     
     if (storedResume) {
       try {
@@ -297,6 +302,9 @@ export default function EditorPage() {
       } catch {
         console.error("Failed to parse design options");
       }
+    }
+    if (storedJobDescription) {
+      setJobDescription(storedJobDescription);
     }
     setIsLoading(false);
   }, [generationId]);
@@ -790,12 +798,21 @@ export default function EditorPage() {
                 />
               </div>
             </div>
-            <Textarea
-              value={resume.summary}
-              onChange={(e) => updateResume({ summary: e.target.value })}
-              rows={4}
-              placeholder="Write a compelling professional summary (max 4 sentences)..."
-            />
+            <div className="flex items-start gap-2">
+              <Textarea
+                ref={(el) => { textareaRefs.current["summary"] = el; }}
+                value={resume.summary}
+                onChange={(e) => updateResume({ summary: e.target.value })}
+                rows={4}
+                className="flex-1"
+                placeholder="Write a compelling professional summary (max 4 sentences)..."
+              />
+              <BoldToggleButton
+                textareaRef={{ get current() { return textareaRefs.current["summary"] ?? null; } }}
+                value={resume.summary}
+                onChange={(v) => updateResume({ summary: v })}
+              />
+            </div>
             <p className="text-xs text-gray-500 mt-1">Keep it brief: 2-4 sentences maximum</p>
           </CollapsibleSection>
         );
@@ -1004,14 +1021,86 @@ export default function EditorPage() {
                         className="mt-1"
                       />
                     </div>
-                    <div>
-                      <Label className="text-sm">Live Demo URL</Label>
-                      <Input
-                        value={proj.url || ""}
-                        onChange={(e) => updateProject(projIndex, { url: e.target.value || undefined })}
-                        className="mt-1"
-                        placeholder="https://example.com"
-                      />
+                    {/* Live Link */}
+                    <div className="rounded-md border border-gray-200 p-3 space-y-2">
+                      <Label className="text-sm font-medium flex items-center gap-1.5">
+                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                        Live
+                      </Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Display Text</Label>
+                          <Input
+                            value={proj.liveText || ""}
+                            onChange={(e) => updateProject(projIndex, { liveText: e.target.value || undefined })}
+                            className="mt-0.5"
+                            placeholder="Live Demo"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">URL</Label>
+                          <Input
+                            value={proj.liveUrl || ""}
+                            onChange={(e) => updateProject(projIndex, { liveUrl: e.target.value || undefined })}
+                            className="mt-0.5"
+                            placeholder="https://example.com"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    {/* GitHub Link */}
+                    <div className="rounded-md border border-gray-200 p-3 space-y-2">
+                      <Label className="text-sm font-medium flex items-center gap-1.5">
+                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                        GitHub
+                      </Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Display Text</Label>
+                          <Input
+                            value={proj.githubText || ""}
+                            onChange={(e) => updateProject(projIndex, { githubText: e.target.value || undefined })}
+                            className="mt-0.5"
+                            placeholder="View Code"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">URL</Label>
+                          <Input
+                            value={proj.githubUrl || ""}
+                            onChange={(e) => updateProject(projIndex, { githubUrl: e.target.value || undefined })}
+                            className="mt-0.5"
+                            placeholder="https://github.com/user/repo"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    {/* Other Link */}
+                    <div className="rounded-md border border-gray-200 p-3 space-y-2">
+                      <Label className="text-sm font-medium flex items-center gap-1.5">
+                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                        Other
+                      </Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Display Text</Label>
+                          <Input
+                            value={proj.otherText || ""}
+                            onChange={(e) => updateProject(projIndex, { otherText: e.target.value || undefined })}
+                            className="mt-0.5"
+                            placeholder="Documentation"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">URL</Label>
+                          <Input
+                            value={proj.otherUrl || ""}
+                            onChange={(e) => updateProject(projIndex, { otherUrl: e.target.value || undefined })}
+                            className="mt-0.5"
+                            placeholder="https://example.com"
+                          />
+                        </div>
+                      </div>
                     </div>
                     <div>
                       <Label className="text-sm">Technologies (comma-separated)</Label>
@@ -1063,6 +1152,7 @@ export default function EditorPage() {
                           : [""]).map((bullet, bulletIndex) => (
                           <div key={bulletIndex} className="flex items-start gap-2">
                             <Textarea
+                              ref={(el) => { textareaRefs.current[`proj-${projIndex}-${bulletIndex}`] = el; }}
                               value={bullet}
                               onChange={(e) => {
                                 const next = [...(proj.highlights || [])];
@@ -1076,6 +1166,23 @@ export default function EditorPage() {
                               className="flex-1 text-sm"
                               rows={2}
                               placeholder="Describe an achievement or feature..."
+                            />
+                            <BoldToggleButton
+                              textareaRef={{ get current() { return textareaRefs.current[`proj-${projIndex}-${bulletIndex}`] ?? null; } }}
+                              value={bullet}
+                              onChange={(v) => {
+                                const next = [...(proj.highlights || [])];
+                                if (next.length === 0 && proj.description) {
+                                  next.push(proj.description);
+                                }
+                                if (next.length === 0) next.push("");
+                                next[bulletIndex] = v;
+                                updateProject(projIndex, { highlights: next });
+                              }}
+                            />
+                            <AiBulletRewriter
+                              currentBullet={bullet}
+                              jobDescription={jobDescription}
                             />
                             <Button
                               variant="ghost"
@@ -1262,11 +1369,21 @@ export default function EditorPage() {
                         <div key={hIndex} className="flex items-start gap-2">
                           <span className="mt-2.5 text-gray-400">•</span>
                           <Textarea
+                            ref={(el) => { textareaRefs.current[`exp-${expIndex}-${hIndex}`] = el; }}
                             value={highlight}
                             onChange={(e) => updateExperienceHighlight(expIndex, hIndex, e.target.value)}
                             rows={2}
                             className="flex-1 text-sm"
                             placeholder="Describe your achievement..."
+                          />
+                          <BoldToggleButton
+                            textareaRef={{ get current() { return textareaRefs.current[`exp-${expIndex}-${hIndex}`] ?? null; } }}
+                            value={highlight}
+                            onChange={(v) => updateExperienceHighlight(expIndex, hIndex, v)}
+                          />
+                          <AiBulletRewriter
+                            currentBullet={highlight}
+                            jobDescription={jobDescription}
                           />
                           <Button
                             variant="ghost"
@@ -1555,11 +1672,17 @@ export default function EditorPage() {
                       {(exp.highlights || []).map((highlight, hIndex) => (
                         <div key={hIndex} className="flex items-start gap-2">
                           <Textarea
+                            ref={(el) => { textareaRefs.current[`lead-${expIndex}-${hIndex}`] = el; }}
                             value={highlight}
                             onChange={(e) => updateLeadershipHighlight(expIndex, hIndex, e.target.value)}
                             rows={2}
                             className="flex-1 text-sm"
                             placeholder="Describe your impact..."
+                          />
+                          <BoldToggleButton
+                            textareaRef={{ get current() { return textareaRefs.current[`lead-${expIndex}-${hIndex}`] ?? null; } }}
+                            value={highlight}
+                            onChange={(v) => updateLeadershipHighlight(expIndex, hIndex, v)}
                           />
                           <Button
                             variant="ghost"
@@ -1672,13 +1795,21 @@ export default function EditorPage() {
                 {customSection.type === "text" ? (
                   <div>
                     <Label className="text-sm">Content</Label>
-                    <Textarea
-                      value={customSection.content || ""}
-                      onChange={(e) => updateCustomSection(customId, { content: e.target.value })}
-                      rows={4}
-                      className="mt-1"
-                      placeholder="Enter your content..."
-                    />
+                    <div className="flex items-start gap-2 mt-1">
+                      <Textarea
+                        ref={(el) => { textareaRefs.current[`custom-${customId}-text`] = el; }}
+                        value={customSection.content || ""}
+                        onChange={(e) => updateCustomSection(customId, { content: e.target.value })}
+                        rows={4}
+                        className="flex-1"
+                        placeholder="Enter your content..."
+                      />
+                      <BoldToggleButton
+                        textareaRef={{ get current() { return textareaRefs.current[`custom-${customId}-text`] ?? null; } }}
+                        value={customSection.content || ""}
+                        onChange={(v) => updateCustomSection(customId, { content: v })}
+                      />
+                    </div>
                   </div>
                 ) : (
                   <div>
@@ -1699,11 +1830,17 @@ export default function EditorPage() {
                         <div key={bIndex} className="flex items-start gap-2">
                           <span className="mt-2.5 text-gray-400">•</span>
                           <Textarea
+                            ref={(el) => { textareaRefs.current[`custom-${customId}-${bIndex}`] = el; }}
                             value={bullet}
                             onChange={(e) => updateCustomBullet(customId, bIndex, e.target.value)}
                             rows={2}
                             className="flex-1 text-sm"
                             placeholder="Enter bullet point..."
+                          />
+                          <BoldToggleButton
+                            textareaRef={{ get current() { return textareaRefs.current[`custom-${customId}-${bIndex}`] ?? null; } }}
+                            value={bullet}
+                            onChange={(v) => updateCustomBullet(customId, bIndex, v)}
                           />
                           <Button
                             variant="ghost"
@@ -1973,22 +2110,82 @@ export default function EditorPage() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="linkedin" className="text-sm">LinkedIn URL</Label>
-                    <Input
-                      id="linkedin"
-                      value={resume.contact.linkedin || ""}
-                      onChange={(e) => updateContact("linkedin", e.target.value)}
-                      className="mt-1"
-                    />
+                    <Label htmlFor="linkedin" className="text-sm font-medium flex items-center gap-1.5">
+                      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                      LinkedIn
+                    </Label>
+                    <div className="grid grid-cols-2 gap-2 mt-1">
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Display Text</Label>
+                        <Input
+                          value={resume.contact.linkedinText || ""}
+                          onChange={(e) => updateContact("linkedinText", e.target.value || "")}
+                          className="mt-0.5"
+                          placeholder="LinkedIn"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">URL</Label>
+                        <Input
+                          value={resume.contact.linkedin || ""}
+                          onChange={(e) => updateContact("linkedin", e.target.value)}
+                          className="mt-0.5"
+                          placeholder="linkedin.com/in/username"
+                        />
+                      </div>
+                    </div>
                   </div>
                   <div>
-                    <Label htmlFor="github" className="text-sm">GitHub URL</Label>
-                    <Input
-                      id="github"
-                      value={resume.contact.github || ""}
-                      onChange={(e) => updateContact("github", e.target.value)}
-                      className="mt-1"
-                    />
+                    <Label htmlFor="github" className="text-sm font-medium flex items-center gap-1.5">
+                      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                      GitHub
+                    </Label>
+                    <div className="grid grid-cols-2 gap-2 mt-1">
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Display Text</Label>
+                        <Input
+                          value={resume.contact.githubText || ""}
+                          onChange={(e) => updateContact("githubText", e.target.value || "")}
+                          className="mt-0.5"
+                          placeholder="GitHub"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">URL</Label>
+                        <Input
+                          value={resume.contact.github || ""}
+                          onChange={(e) => updateContact("github", e.target.value)}
+                          className="mt-0.5"
+                          placeholder="github.com/username"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="portfolio" className="text-sm font-medium flex items-center gap-1.5">
+                      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                      Portfolio
+                    </Label>
+                    <div className="grid grid-cols-2 gap-2 mt-1">
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Display Text</Label>
+                        <Input
+                          value={resume.contact.portfolioText || ""}
+                          onChange={(e) => updateContact("portfolioText", e.target.value || "")}
+                          className="mt-0.5"
+                          placeholder="Portfolio"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">URL</Label>
+                        <Input
+                          value={resume.contact.portfolio || ""}
+                          onChange={(e) => updateContact("portfolio", e.target.value)}
+                          className="mt-0.5"
+                          placeholder="myportfolio.com"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </SimpleCollapsibleSection>

@@ -2,6 +2,7 @@
 // This is a simplified version without React hooks or client-side features
 
 import { TailoredResume, DesignOptions, DEFAULT_DESIGN_OPTIONS, FONT_FAMILIES, MARGIN_SIZES, HEADING_COLORS, TemplateSlug } from "@/types/resume";
+import { boldToHtml } from "@/lib/bold-utils";
 
 interface ServerTemplateProps {
   resume: TailoredResume;
@@ -94,11 +95,15 @@ export function generateResumeHTML({
     }
     if (resume.contact.linkedin) {
       const linkedinUrl = toHref(resume.contact.linkedin);
-      items.push(`<span style="font-size: ${contactLinkedinSize}px; font-family: ${getFontFamily('contactInfo')};"><a href="${linkedinUrl}" target="_blank" rel="noreferrer" style="text-decoration: none; color: inherit;">LinkedIn</a></span>`);
+      items.push(`<span style="font-size: ${contactLinkedinSize}px; font-family: ${getFontFamily('contactInfo')};"><a href="${linkedinUrl}" target="_blank" rel="noreferrer" style="text-decoration: none; color: inherit;">${resume.contact.linkedinText || "LinkedIn"}</a></span>`);
     }
     if (resume.contact.github) {
       const githubUrl = toHref(resume.contact.github);
-      items.push(`<span style="font-size: ${contactGithubSize}px; font-family: ${getFontFamily('contactInfo')};"><a href="${githubUrl}" target="_blank" rel="noreferrer" style="text-decoration: none; color: inherit;">Github</a></span>`);
+      items.push(`<span style="font-size: ${contactGithubSize}px; font-family: ${getFontFamily('contactInfo')};"><a href="${githubUrl}" target="_blank" rel="noreferrer" style="text-decoration: none; color: inherit;">${resume.contact.githubText || "Github"}</a></span>`);
+    }
+    if (resume.contact.portfolio) {
+      const portfolioUrl = toHref(resume.contact.portfolio);
+      items.push(`<span style="font-size: ${contactInfoSize}px; font-family: ${getFontFamily('contactInfo')};"><a href="${portfolioUrl}" target="_blank" rel="noreferrer" style="text-decoration: none; color: inherit;">${resume.contact.portfolioText || resume.contact.portfolio}</a></span>`);
     }
     if (resume.contact.website) {
       const websiteUrl = toHref(resume.contact.website);
@@ -154,7 +159,7 @@ export function generateResumeHTML({
         <h2 style="font-size: ${summaryTitleSize}px; font-weight: 700; color: ${colors.primary}; text-transform: uppercase; margin-bottom: 6px; padding-bottom: 2px; font-family: ${getFontFamily('summaryTitle')}; border-bottom: 1px solid ${colors.border};">
           Summary
         </h2>
-        <p style="font-size: ${summaryTextSize}px; font-family: ${getFontFamily('summaryText')};">${resume.summary}</p>
+        <p style="font-size: ${summaryTextSize}px; font-family: ${getFontFamily('summaryText')};">${boldToHtml(resume.summary)}</p>
       </section>
     `;
   }
@@ -168,7 +173,7 @@ export function generateResumeHTML({
       // Use list-style-position: outside so wrapped text aligns with first line text
       const highlights = exp.highlights && exp.highlights.length > 0
         ? `<ul style="margin-top: 2px; font-size: ${experienceTextSize}px; font-family: ${getFontFamily('experienceText')}; list-style-type: disc; list-style-position: outside; padding-left: 1.7em;">
-            ${exp.highlights.map(h => `<li>${h}</li>`).join('')}
+            ${exp.highlights.map(h => `<li>${boldToHtml(h)}</li>`).join('')}
            </ul>`
         : "";
 
@@ -282,14 +287,14 @@ export function generateResumeHTML({
     const projItems = resume.projects.map(proj => `
       <div style="margin-bottom: 6px;">
         <div style="font-weight: 700; font-size: ${projectTitleSize}px; font-family: ${getFontFamily('projectTitle')};">
-          ${proj.name}${proj.url ? ` <span style="font-weight: 400; font-size: ${projectDescSize}px; font-family: ${getFontFamily('projectDescription')};">| <a href="${toHref(proj.url)}" target="_blank" rel="noreferrer" style="text-decoration: underline; color: inherit;">${proj.url}</a></span>` : ""}
+          ${proj.name}${proj.liveUrl ? ` <span style="font-weight: 400; font-size: ${projectDescSize}px; font-family: ${getFontFamily('projectDescription')};">| <svg style="display:inline;vertical-align:middle;width:${projectDescSize}px;height:${projectDescSize}px;margin-right:2px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg><a href="${toHref(proj.liveUrl)}" target="_blank" rel="noreferrer" style="text-decoration: underline; color: inherit;">${proj.liveText || proj.liveUrl}</a></span>` : ""}${proj.githubUrl ? ` <span style="font-weight: 400; font-size: ${projectDescSize}px; font-family: ${getFontFamily('projectDescription')};">| <svg style="display:inline;vertical-align:middle;width:${projectDescSize}px;height:${projectDescSize}px;margin-right:2px;" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg><a href="${toHref(proj.githubUrl)}" target="_blank" rel="noreferrer" style="text-decoration: underline; color: inherit;">${proj.githubText || proj.githubUrl}</a></span>` : ""}${proj.otherUrl ? ` <span style="font-weight: 400; font-size: ${projectDescSize}px; font-family: ${getFontFamily('projectDescription')};">| <svg style="display:inline;vertical-align:middle;width:${projectDescSize}px;height:${projectDescSize}px;margin-right:2px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg><a href="${toHref(proj.otherUrl)}" target="_blank" rel="noreferrer" style="text-decoration: underline; color: inherit;">${proj.otherText || proj.otherUrl}</a></span>` : ""}
         </div>
         ${proj.highlights && proj.highlights.length > 0
           ? `<ul style="margin-top: 2px; font-size: ${projectDescSize}px; font-family: ${getFontFamily('projectDescription')}; list-style-type: disc; list-style-position: outside; padding-left: 1.7em;">
-              ${proj.highlights.map(item => `<li>${item}</li>`).join("")}
+              ${proj.highlights.map(item => `<li>${boldToHtml(item)}</li>`).join("")}
             </ul>`
           : proj.description
-          ? `<ul style="margin-top: 2px; font-size: ${projectDescSize}px; font-family: ${getFontFamily('projectDescription')}; list-style-type: disc; list-style-position: outside; padding-left: 1.7em;"><li>${proj.description}</li></ul>`
+          ? `<ul style="margin-top: 2px; font-size: ${projectDescSize}px; font-family: ${getFontFamily('projectDescription')}; list-style-type: disc; list-style-position: outside; padding-left: 1.7em;"><li>${boldToHtml(proj.description)}</li></ul>`
           : ""}
       </div>
     `).join('');
@@ -310,7 +315,7 @@ export function generateResumeHTML({
     const items = resume.leadership.map(exp => {
       const highlights = exp.highlights && exp.highlights.length > 0
         ? `<ul style="margin-top: 2px; font-size: ${experienceTextSize}px; font-family: ${getFontFamily('experienceText')}; list-style-type: disc; list-style-position: outside; padding-left: 1.7em;">
-            ${exp.highlights.map(h => `<li>${h}</li>`).join('')}
+            ${exp.highlights.map(h => `<li>${boldToHtml(h)}</li>`).join('')}
            </ul>`
         : "";
 

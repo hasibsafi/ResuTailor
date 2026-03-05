@@ -67,6 +67,7 @@ Each bullet must follow:
 Strong Action Verb + Specific Task/Scope + Why It Mattered
 
 Rules:
+- Write as a real person would — avoid sounding like a template or AI. Vary rhythm, sentence length, and structure.
 - Use varied, natural action verbs appropriate to context.
 - Avoid robotic repetition.
 - Focus on ownership and decision-making when truthful.
@@ -105,7 +106,7 @@ KEYWORD INTEGRATION
 The user provides selectedKeywords.
 
 Requirements:
-- Every selectedKeyword MUST appear somewhere in the resume.
+- integrate as many as naturally fit; list the rest in missingKeywords
 - Integrate keywords naturally into summary, experience, or skills.
 - Avoid unnatural repetition.
 - Do not invent context just to force a keyword.
@@ -203,16 +204,16 @@ export async function tailorResume(
       },
       {
         role: "user",
-        content: JSON.stringify({
+        content: `Here is the candidate's current resume, the job they're targeting, and the keywords to integrate. Rewrite the resume to sound natural and human while aligning with the role.\n\n${JSON.stringify({
           parsedResume,
           jobDescription,
           selectedKeywords,
-        }),
+        })}`,
       },
     ],
     response_format: { type: "json_object" },
-    temperature: 0.4,
-    max_completion_tokens: 4000,
+    temperature: 0.65,
+    max_completion_tokens: 6000,
   });
 
   const content = response.choices[0].message.content;
@@ -303,36 +304,99 @@ export async function tailorResume(
       skills.other = skills.other || [];
 
       const frontendSet = new Set([
-        "javascript", "typescript", "html", "css", "html5", "css3",
-        "jsx", "react", "next.js", "nextjs", "angular", "vue", "svelte",
-        "tailwind", "tailwind css", "redux", "es6", "es6+",
+        "javascript",
+        "typescript",
+        "html",
+        "css",
+        "html5",
+        "css3",
+        "jsx",
+        "react",
+        "next.js",
+        "nextjs",
+        "angular",
+        "vue",
+        "svelte",
+        "tailwind",
+        "tailwind css",
+        "redux",
+        "es6",
+        "es6+",
         "javascript (es6+)",
       ]);
       const backendSet = new Set([
-        "node.js", "nodejs", "python", "fastapi", "django", "flask",
-        "express", "nestjs", "spring", "java", "c", "c++", "c#",
-        "go", "golang", "ruby", "php", "swift", "kotlin", "rust",
-        "scala", "sql", "bash", "shell",
-        "restful api development", "restful apis", "api integrations",
+        "node.js",
+        "nodejs",
+        "python",
+        "fastapi",
+        "django",
+        "flask",
+        "express",
+        "nestjs",
+        "spring",
+        "java",
+        "c",
+        "c++",
+        "c#",
+        "go",
+        "golang",
+        "ruby",
+        "php",
+        "swift",
+        "kotlin",
+        "rust",
+        "scala",
+        "sql",
+        "bash",
+        "shell",
+        "restful api development",
+        "restful apis",
+        "api integrations",
       ]);
       const databaseSet = new Set([
-        "postgresql", "firebase firestore", "firestore", "mongodb",
-        "mysql", "redis", "sqlite", "dynamodb", "nosql",
+        "postgresql",
+        "firebase firestore",
+        "firestore",
+        "mongodb",
+        "mysql",
+        "redis",
+        "sqlite",
+        "dynamodb",
+        "nosql",
       ]);
       const infraSet = new Set([
-        "docker", "git", "github", "github actions", "github actions (ci/cd)",
-        "ci/cd", "aws", "kubernetes", "terraform", "serverless",
-        "firebase", "firebase admin sdk",
+        "docker",
+        "git",
+        "github",
+        "github actions",
+        "github actions (ci/cd)",
+        "ci/cd",
+        "aws",
+        "kubernetes",
+        "terraform",
+        "serverless",
+        "firebase",
+        "firebase admin sdk",
       ]);
       const securitySet = new Set([
-        "rbac", "role-based access control", "role-based access control (rbac)",
-        "csp", "hsts", "secure headers", "secure headers (csp, hsts)",
-        "google recaptcha", "json-ld", "structured data",
-        "structured data (json-ld)", "sitemap/robots configuration",
+        "rbac",
+        "role-based access control",
+        "role-based access control (rbac)",
+        "csp",
+        "hsts",
+        "secure headers",
+        "secure headers (csp, hsts)",
+        "google recaptcha",
+        "json-ld",
+        "structured data",
+        "structured data (json-ld)",
+        "sitemap/robots configuration",
       ]);
       const conceptSet = new Set([
-        "authentication flows", "real-time systems",
-        "performance profiling", "api contract validation",
+        "authentication flows",
+        "real-time systems",
+        "performance profiling",
+        "api contract validation",
       ]);
 
       const pushUnique = (arr: string[], value: string) => {
@@ -377,10 +441,10 @@ export async function tailorResume(
       contact.name = "Unknown";
     }
     // Clean up and validate URLs
-    ["linkedin", "github", "website"].forEach((field) => {
+    ["linkedin", "github", "website", "portfolio"].forEach((field) => {
       const value = contact[field];
       if (value && typeof value === "string") {
-        let url = value.trim();
+        const url = value.trim();
 
         // If it's just a username, profile name, or placeholder text, remove it
         if (!url.includes(".") || url.length < 10) {
@@ -564,7 +628,7 @@ const extractContactFallback = (resumeText: string) => {
 
 async function parseChunkWithOpenAI(text: string) {
   const response = await openai.chat.completions.create({
-    model: "gpt-4.1",
+    model: "gpt-5.2",
     messages: [
       {
         role: "system",
@@ -611,6 +675,7 @@ export async function parseResumeText(
   );
 
   // Validate and provide defaults for optional arrays
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const normalizedResume: Record<string, any> = {
     ...parsed,
     contact: parsed.contact || { name: "Unknown" },
@@ -761,6 +826,12 @@ export async function parseResumeText(
         description:
           typeof proj.description === "string" ? proj.description : undefined,
         url: proj.url,
+        liveUrl: proj.liveUrl,
+        liveText: typeof proj.liveText === "string" ? proj.liveText : undefined,
+        githubUrl: proj.githubUrl,
+        githubText: typeof proj.githubText === "string" ? proj.githubText : undefined,
+        otherUrl: proj.otherUrl,
+        otherText: typeof proj.otherText === "string" ? proj.otherText : undefined,
         technologies: normalizeStringArray(proj.technologies),
         highlights: normalizeStringArray(proj.highlights),
       };
@@ -772,21 +843,76 @@ export async function parseResumeText(
   normalizedResume.projects = (normalizedResume.projects || []).map(
     (proj: Record<string, unknown>) => {
       const result: Record<string, unknown> = { ...proj };
-      if (result.url === null) {
-        delete result.url;
-        return result;
-      }
-      if (result.url && typeof result.url === "string") {
-        const url = result.url.trim();
-        if (!url) {
-          delete result.url;
-          return result;
+
+      // Migrate legacy url -> liveUrl for backward compatibility
+      if (result.url && !result.liveUrl) {
+        const legacyUrl = typeof result.url === "string" ? result.url.trim() : "";
+        if (legacyUrl) {
+          result.liveUrl = legacyUrl;
+          if (!result.liveText) {
+            result.liveText = stripUrlScheme(legacyUrl);
+          }
         }
-        // Preserve user-provided URL as-is (strip scheme for display consistency)
-        result.url = stripUrlScheme(url);
-      } else if (result.url) {
-        delete result.url;
       }
+      delete result.url;
+
+      // Clean githubUrl
+      if (result.githubUrl === null) {
+        delete result.githubUrl;
+      } else if (result.githubUrl && typeof result.githubUrl === "string") {
+        const url = result.githubUrl.trim();
+        if (!url) {
+          delete result.githubUrl;
+        } else {
+          result.githubUrl = stripUrlScheme(url);
+        }
+      } else if (result.githubUrl) {
+        delete result.githubUrl;
+      }
+
+      // Clean githubText
+      if (result.githubText === null || (typeof result.githubText === "string" && !result.githubText.trim())) {
+        delete result.githubText;
+      }
+
+      // Clean liveUrl
+      if (result.liveUrl === null) {
+        delete result.liveUrl;
+      } else if (result.liveUrl && typeof result.liveUrl === "string") {
+        const url = result.liveUrl.trim();
+        if (!url) {
+          delete result.liveUrl;
+        } else {
+          result.liveUrl = stripUrlScheme(url);
+        }
+      } else if (result.liveUrl) {
+        delete result.liveUrl;
+      }
+
+      // Clean liveText
+      if (result.liveText === null || (typeof result.liveText === "string" && !result.liveText.trim())) {
+        delete result.liveText;
+      }
+
+      // Clean otherUrl
+      if (result.otherUrl === null) {
+        delete result.otherUrl;
+      } else if (result.otherUrl && typeof result.otherUrl === "string") {
+        const url = result.otherUrl.trim();
+        if (!url) {
+          delete result.otherUrl;
+        } else {
+          result.otherUrl = stripUrlScheme(url);
+        }
+      } else if (result.otherUrl) {
+        delete result.otherUrl;
+      }
+
+      // Clean otherText
+      if (result.otherText === null || (typeof result.otherText === "string" && !result.otherText.trim())) {
+        delete result.otherText;
+      }
+
       return result;
     },
   );
@@ -828,7 +954,9 @@ export async function parseResumeText(
     frontend: normalizeStringArray(normalizedResume.skills?.frontend),
     backend: normalizeStringArray(normalizedResume.skills?.backend),
     databases: normalizeStringArray(normalizedResume.skills?.databases),
-    infrastructure: normalizeStringArray(normalizedResume.skills?.infrastructure),
+    infrastructure: normalizeStringArray(
+      normalizedResume.skills?.infrastructure,
+    ),
     security: normalizeStringArray(normalizedResume.skills?.security),
     concepts: normalizeStringArray(normalizedResume.skills?.concepts),
     frameworks: normalizeStringArray(normalizedResume.skills?.frameworks),
@@ -840,36 +968,99 @@ export async function parseResumeText(
 
   // Re-bucket ALL skills into 6 categories
   const frontendSet = new Set([
-    "javascript", "typescript", "html", "css", "html5", "css3",
-    "jsx", "react", "next.js", "nextjs", "angular", "vue", "svelte",
-    "tailwind", "tailwind css", "redux", "es6", "es6+",
+    "javascript",
+    "typescript",
+    "html",
+    "css",
+    "html5",
+    "css3",
+    "jsx",
+    "react",
+    "next.js",
+    "nextjs",
+    "angular",
+    "vue",
+    "svelte",
+    "tailwind",
+    "tailwind css",
+    "redux",
+    "es6",
+    "es6+",
     "javascript (es6+)",
   ]);
   const backendSet = new Set([
-    "node.js", "nodejs", "python", "fastapi", "django", "flask",
-    "express", "nestjs", "spring", "java", "c", "c++", "c#",
-    "go", "golang", "ruby", "php", "swift", "kotlin", "rust",
-    "scala", "sql", "bash", "shell",
-    "restful api development", "restful apis", "api integrations",
+    "node.js",
+    "nodejs",
+    "python",
+    "fastapi",
+    "django",
+    "flask",
+    "express",
+    "nestjs",
+    "spring",
+    "java",
+    "c",
+    "c++",
+    "c#",
+    "go",
+    "golang",
+    "ruby",
+    "php",
+    "swift",
+    "kotlin",
+    "rust",
+    "scala",
+    "sql",
+    "bash",
+    "shell",
+    "restful api development",
+    "restful apis",
+    "api integrations",
   ]);
   const databaseSet = new Set([
-    "postgresql", "firebase firestore", "firestore", "mongodb",
-    "mysql", "redis", "sqlite", "dynamodb", "nosql",
+    "postgresql",
+    "firebase firestore",
+    "firestore",
+    "mongodb",
+    "mysql",
+    "redis",
+    "sqlite",
+    "dynamodb",
+    "nosql",
   ]);
   const infraSet = new Set([
-    "docker", "git", "github", "github actions", "github actions (ci/cd)",
-    "ci/cd", "aws", "kubernetes", "terraform", "serverless",
-    "firebase", "firebase admin sdk",
+    "docker",
+    "git",
+    "github",
+    "github actions",
+    "github actions (ci/cd)",
+    "ci/cd",
+    "aws",
+    "kubernetes",
+    "terraform",
+    "serverless",
+    "firebase",
+    "firebase admin sdk",
   ]);
   const securitySet = new Set([
-    "rbac", "role-based access control", "role-based access control (rbac)",
-    "csp", "hsts", "secure headers", "secure headers (csp, hsts)",
-    "google recaptcha", "json-ld", "structured data",
-    "structured data (json-ld)", "sitemap/robots configuration",
+    "rbac",
+    "role-based access control",
+    "role-based access control (rbac)",
+    "csp",
+    "hsts",
+    "secure headers",
+    "secure headers (csp, hsts)",
+    "google recaptcha",
+    "json-ld",
+    "structured data",
+    "structured data (json-ld)",
+    "sitemap/robots configuration",
   ]);
   const conceptSet = new Set([
-    "authentication flows", "real-time systems",
-    "performance profiling", "api contract validation",
+    "authentication flows",
+    "real-time systems",
+    "performance profiling",
+    "api contract validation",
   ]);
 
   const bucketSkill = (value: string) => {
@@ -931,17 +1122,39 @@ export async function parseResumeText(
   normalizedResume.skills.languages = [];
 
   // Include default frontend skills
-  const defaultFrontend = ["TypeScript", "JavaScript (ES6+)", "React", "Next.js", "Angular", "HTML5", "CSS3", "Tailwind CSS"];
+  const defaultFrontend = [
+    "TypeScript",
+    "JavaScript (ES6+)",
+    "React",
+    "Next.js",
+    "Angular",
+    "HTML5",
+    "CSS3",
+    "Tailwind CSS",
+  ];
   defaultFrontend.forEach((skill) => {
-    if (!normalizedResume.skills.frontend.some((s: string) => s.toLowerCase() === skill.toLowerCase())) {
+    if (
+      !normalizedResume.skills.frontend.some(
+        (s: string) => s.toLowerCase() === skill.toLowerCase(),
+      )
+    ) {
       normalizedResume.skills.frontend.push(skill);
     }
   });
 
   // Include default backend skills
-  const defaultBackend = ["Node.js", "Python", "FastAPI", "RESTful API development"];
+  const defaultBackend = [
+    "Node.js",
+    "Python",
+    "FastAPI",
+    "RESTful API development",
+  ];
   defaultBackend.forEach((skill) => {
-    if (!normalizedResume.skills.backend.some((s: string) => s.toLowerCase() === skill.toLowerCase())) {
+    if (
+      !normalizedResume.skills.backend.some(
+        (s: string) => s.toLowerCase() === skill.toLowerCase(),
+      )
+    ) {
       normalizedResume.skills.backend.push(skill);
     }
   });
@@ -949,7 +1162,11 @@ export async function parseResumeText(
   // Include default database skills
   const defaultDatabases = ["PostgreSQL", "Firebase Firestore"];
   defaultDatabases.forEach((skill) => {
-    if (!normalizedResume.skills.databases.some((s: string) => s.toLowerCase() === skill.toLowerCase())) {
+    if (
+      !normalizedResume.skills.databases.some(
+        (s: string) => s.toLowerCase() === skill.toLowerCase(),
+      )
+    ) {
       normalizedResume.skills.databases.push(skill);
     }
   });
@@ -957,23 +1174,46 @@ export async function parseResumeText(
   // Include default infrastructure skills
   const defaultInfra = ["Docker", "GitHub Actions (CI/CD)", "Git"];
   defaultInfra.forEach((skill) => {
-    if (!normalizedResume.skills.infrastructure.some((s: string) => s.toLowerCase() === skill.toLowerCase())) {
+    if (
+      !normalizedResume.skills.infrastructure.some(
+        (s: string) => s.toLowerCase() === skill.toLowerCase(),
+      )
+    ) {
       normalizedResume.skills.infrastructure.push(skill);
     }
   });
 
   // Include default security skills
-  const defaultSecurity = ["Role-based access control (RBAC)", "Secure headers (CSP, HSTS)", "Google reCAPTCHA", "Structured data (JSON-LD)", "Sitemap/robots configuration"];
+  const defaultSecurity = [
+    "Role-based access control (RBAC)",
+    "Secure headers (CSP, HSTS)",
+    "Google reCAPTCHA",
+    "Structured data (JSON-LD)",
+    "Sitemap/robots configuration",
+  ];
   defaultSecurity.forEach((skill) => {
-    if (!normalizedResume.skills.security.some((s: string) => s.toLowerCase() === skill.toLowerCase())) {
+    if (
+      !normalizedResume.skills.security.some(
+        (s: string) => s.toLowerCase() === skill.toLowerCase(),
+      )
+    ) {
       normalizedResume.skills.security.push(skill);
     }
   });
 
   // Include default concepts
-  const defaultConcepts = ["Authentication flows", "Real-time systems", "Performance profiling", "API contract validation"];
+  const defaultConcepts = [
+    "Authentication flows",
+    "Real-time systems",
+    "Performance profiling",
+    "API contract validation",
+  ];
   defaultConcepts.forEach((skill) => {
-    if (!normalizedResume.skills.concepts.some((s: string) => s.toLowerCase() === skill.toLowerCase())) {
+    if (
+      !normalizedResume.skills.concepts.some(
+        (s: string) => s.toLowerCase() === skill.toLowerCase(),
+      )
+    ) {
       normalizedResume.skills.concepts.push(skill);
     }
   });
@@ -1003,10 +1243,10 @@ export async function parseResumeText(
       }
     });
     // Clean up and validate URLs
-    ["linkedin", "github", "website"].forEach((field) => {
+    ["linkedin", "github", "website", "portfolio"].forEach((field) => {
       const value = contact[field];
       if (value && typeof value === "string") {
-        let url = value.trim();
+        const url = value.trim();
 
         // If it's just a username, profile name, or placeholder text, remove it
         if (!url.includes(".") || url.length < 10) {
@@ -1211,7 +1451,7 @@ export async function extractJobDescription(
   jdText: string,
 ): Promise<ExtractedJobDescription> {
   const response = await openai.chat.completions.create({
-    model: "gpt-4.1",
+    model: "gpt-5.2",
     messages: [
       {
         role: "system",
@@ -1259,7 +1499,7 @@ export async function generateCoverLetter(
   jobDescription: string,
 ): Promise<string> {
   const response = await openai.chat.completions.create({
-    model: "gpt-4.1",
+    model: "gpt-5.2",
     messages: [
       {
         role: "system",

@@ -22,7 +22,11 @@ export const ContactSchema = z.object({
   location: z.string().optional(),
   visaStatus: z.string().optional(),
   linkedin: z.string().refine(isUrlOrDomain, "Invalid URL").optional(),
+  linkedinText: z.string().optional(),
   github: z.string().refine(isUrlOrDomain, "Invalid URL").optional(),
+  githubText: z.string().optional(),
+  portfolio: z.string().refine(isUrlOrDomain, "Invalid URL").optional(),
+  portfolioText: z.string().optional(),
   website: z.string().refine(isUrlOrDomain, "Invalid URL").optional(),
 });
 
@@ -53,6 +57,12 @@ export const ProjectSchema = z.object({
   name: z.string(),
   description: z.string().optional(),
   url: z.string().refine(isUrlOrDomain, "Invalid URL").optional(),
+  liveUrl: z.string().refine(isUrlOrDomain, "Invalid URL").optional(),
+  liveText: z.string().optional(),
+  githubUrl: z.string().refine(isUrlOrDomain, "Invalid URL").optional(),
+  githubText: z.string().optional(),
+  otherUrl: z.string().refine(isUrlOrDomain, "Invalid URL").optional(),
+  otherText: z.string().optional(),
   technologies: z.array(z.string()).optional(),
   highlights: z.array(z.string()).optional(),
 });

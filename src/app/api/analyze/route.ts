@@ -51,14 +51,14 @@ export async function POST(request: NextRequest) {
     if (!parsedResume) {
       return NextResponse.json(
         { error: "Parsed resume is required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (!jobDescription || jobDescription.length < 50) {
       return NextResponse.json(
         { error: "Job description must be at least 50 characters" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
       console.error("Resume validation errors:", resumeResult.error.issues);
       return NextResponse.json(
         { error: "Invalid resume data structure" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
 
     // Analyze keywords
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-5.2",
       messages: [
         {
           role: "system",
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
       ],
       response_format: { type: "json_object" },
       temperature: 0.2,
-      max_tokens: 2000,
+      max_completion_tokens: 2000,
     });
 
     const content = response.choices[0].message.content;
@@ -128,8 +128,11 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Analyze error:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to analyze resume" },
-      { status: 500 }
+      {
+        error:
+          error instanceof Error ? error.message : "Failed to analyze resume",
+      },
+      { status: 500 },
     );
   }
 }
